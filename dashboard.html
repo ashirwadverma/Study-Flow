@@ -1,0 +1,2058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | StudyFlow</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/dashboard.css">
+</head>
+<body>
+  <button class="sidebar-toggle" id="sidebar-toggle">☰</button>
+
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-left">
+        <div class="brand-icon">📚</div>
+        <span class="brand-name">Study<span>Flow</span></span>
+      </div>
+      <button class="btn-sidebar-collapse" id="btn-sidebar-collapse" title="Collapse Sidebar (Shift page left)">◀</button>
+    </div>
+    <div class="sidebar-greeting">
+      <div class="hi">Welcome back</div>
+      <div class="name">Hey, <span id="user-greeting">Student</span> 👋</div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Main</div>
+      <div class="nav-item active" data-tab="home"><span class="nav-icon">🏠</span> Dashboard</div>
+      <div class="nav-item" data-tab="subjects"><span class="nav-icon">📖</span> My Subjects <span class="nav-badge" id="badge-subjects">0</span></div>
+      <div class="nav-item" data-tab="sessions"><span class="nav-icon">📅</span> Study Sessions <span class="nav-badge" id="badge-sessions">0</span></div>
+      <div class="nav-item" data-tab="pyq"><span class="nav-icon">📑</span> PYQ Analyzer <span class="nav-badge" id="badge-pyq">New</span></div>
+      <div class="nav-item" data-tab="notes"><span class="nav-icon">📝</span> Study Notes</div>
+      <div class="nav-section-label">Progress & Goals</div>
+      <div class="nav-item" data-tab="progress"><span class="nav-icon">📊</span> Analytics</div>
+      <div class="nav-item" data-tab="exams"><span class="nav-icon">🎯</span> Upcoming Exams <span class="nav-badge" id="badge-exams">0</span></div>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sidebar-user">
+        <div class="user-avatar" id="user-avatar-initials">S</div>
+        <div class="user-info">
+          <div class="user-name">Student Account</div>
+          <div class="user-role">Smart Semester Plan</div>
+        </div>
+      </div>
+      <button class="btn-logout" onclick="logout()"><span>⎋</span> Sign Out</button>
+    </div>
+  </aside>
+
+  <div class="main-wrapper">
+    <header class="topbar">
+      <div class="topbar-left">
+        <button class="topbar-toggle-sidebar" id="btn-topbar-sidebar-toggle" title="Toggle Sidebar">☰</button>
+        <h1 id="topbar-page-title">Dashboard <span>Overview</span></h1>
+      </div>
+      <div class="topbar-right">
+        <span class="topbar-date" id="today-date"></span>
+        <button class="btn-ai-upload" id="btn-top-upload-syllabus">✨ Upload Syllabus (AI)</button>
+        <button class="btn-add" id="btn-add-subject">＋ Add Subject</button>
+        <button class="btn-sm-outline" id="btn-topbar-settings" onclick="openNotificationSettingsModal()" title="Notification &amp; Achievement Preferences" style="padding:.5rem .75rem; border-radius:999px;">⚙️ Notifications</button>
+      </div>
+    </header>
+
+    <main class="content">
+      <!-- ─── TAB 1: DASHBOARD HOME ─── -->
+      <div class="tab-view active" id="tab-view-home">
+        <div class="onboarding-card" id="onboarding-card" style="display:none;">
+          <div class="onboarding-icon">🚀</div>
+          <div class="onboarding-text">
+            <h3>Let's build your semester study tracker!</h3>
+            <p>Upload a course syllabus PDF or paste topics. Gemini AI will automatically extract all units, exams, and build your schedule.</p>
+          </div>
+          <div class="onboarding-actions">
+            <button class="btn-primary" id="btn-start-ai">✨ Upload Syllabus (AI)</button>
+            <button class="btn-sm-outline" id="btn-start-manual">+ Add Manual</button>
+          </div>
+        </div>
+
+        <div class="stats-row" id="stats-row">
+          <div class="stat-card c1"><div class="stat-icon">📚</div><div class="stat-label">Total Subjects</div><div class="stat-value" id="stat-subjects">0</div><div class="stat-sub">Active courses</div></div>
+          <div class="stat-card c2"><div class="stat-icon">✅</div><div class="stat-label">Sessions Done</div><div class="stat-value" id="stat-done">0</div><div class="stat-sub">of <span id="stat-total-sessions">0</span> planned</div></div>
+          <div class="stat-card c3"><div class="stat-icon">⏱️</div><div class="stat-label">Hours Studied</div><div class="stat-value" id="stat-hours">0h</div><div class="stat-sub">Total time invested</div></div>
+          <div class="stat-card c4"><div class="stat-icon">🎯</div><div class="stat-label">Exams Ahead</div><div class="stat-value" id="stat-exams">0</div><div class="stat-sub">Next 30 days</div></div>
+        </div>
+
+        <div class="panels-row">
+          <div class="panel">
+            <div class="panel-header"><div><div class="panel-title">🗓️ Upcoming Exams</div><div class="panel-sub">Next 30 days countdown</div></div></div>
+            <div class="exam-list" id="exam-list"><div class="panel-empty">No upcoming exams added</div></div>
+          </div>
+          <div class="panel">
+            <div class="panel-header"><div><div class="panel-title">📈 Subject Progress</div><div class="panel-sub">Syllabus completed</div></div></div>
+            <div class="subject-list" id="subject-progress-list"><div class="panel-empty">No subjects yet</div></div>
+          </div>
+          <!-- Panel 3: Recent Activity -->
+          <div class="panel">
+            <div class="panel-header">
+              <div>
+                <div class="panel-title">🔔 Recent Activity</div>
+                <div class="panel-sub">Timeline updates</div>
+              </div>
+              <span class="badge-pill badge-new" id="activity-badge">0 new</span>
+            </div>
+            <div class="update-list" id="activity-list"><div class="panel-empty">No activity yet</div></div>
+          </div>
+        </div>
+
+        <div class="tab-section">
+          <div class="tab-header">
+            <span class="tab-title">📝 Study Sessions &amp; Deadlines</span>
+            <div class="tabs" id="session-tabs">
+              <button class="tab-btn active" data-filter="all">All <span class="tab-count" id="cnt-all">0</span></button>
+              <button class="tab-btn" data-filter="today">Today</button>
+              <button class="tab-btn" data-filter="pending">Pending</button>
+              <button class="tab-btn" data-filter="done">Done</button>
+            </div>
+            <div class="tab-actions">
+              <div class="table-search-box">
+                <span>🔍</span>
+                <input type="text" id="filter-search-input" placeholder="Search topic or subject..." aria-label="Search study sessions">
+              </div>
+              <select id="filter-subject-select" class="session-filter-select" aria-label="Filter by Subject">
+                <option value="all">All Subjects</option>
+              </select>
+              <button class="btn-save-changes" id="btn-save-sessions" onclick="saveAllChangesFeedback()">💾 Save Changes</button>
+              <button class="btn-sm-outline" id="btn-add-session">＋ New Session</button>
+            </div>
+          </div>
+          <div id="sessions-table-wrap">
+            <table class="study-table">
+              <thead><tr><th style="min-width:145px;">Topic Assessment</th><th>Due Date</th><th>Topic / Session</th><th>Subject</th><th>Difficulty</th><th>Status</th></tr></thead>
+              <tbody id="sessions-tbody">
+                <tr><td colspan="6"><div class="empty-pane"><div class="empty-icon">📅</div><h3>No sessions yet</h3><p>Upload a syllabus or click <strong>+ New Session</strong> to get started.</p></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── TAB 2: MY SUBJECTS (Photo 3) ─── -->
+      <div class="tab-view" id="tab-view-subjects">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+          <div><h2 style="font-size:1.25rem;font-weight:700;">My Enrolled Subjects</h2><p style="font-size:.82rem;color:var(--muted);">All active courses and their syllabus breakdown.</p></div>
+          <div style="display:flex;gap:.6rem;align-items:center;">
+            <button class="btn-save-changes" onclick="saveAllChangesFeedback()">💾 Save Changes</button>
+            <button class="btn-ai-upload" onclick="openUploadModal()">✨ Upload Syllabus (AI)</button>
+          </div>
+        </div>
+        <div class="subjects-grid" id="subjects-full-grid">
+          <div class="panel-empty" style="grid-column:1/-1;">No subjects added yet. Upload a syllabus or add one manually!</div>
+        </div>
+      </div>
+
+      <!-- ─── TAB 3: STUDY SESSIONS ─── -->
+      <div class="tab-view" id="tab-view-sessions">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:.75rem;">
+          <div><h2 style="font-size:1.25rem;font-weight:700;">Complete Study Schedule</h2><p style="font-size:.82rem;color:var(--muted);">Track and check off your study milestones.</p></div>
+          <div style="display:flex;gap:.6rem;align-items:center;">
+            <button class="btn-save-changes" id="btn-full-save-changes" onclick="saveAllChangesFeedback()">💾 Save Changes</button>
+            <button class="btn-sm-outline" onclick="openSessionModal()">＋ Add Session</button>
+          </div>
+        </div>
+        <div class="tab-section">
+          <div class="tab-header">
+            <div class="tabs" id="full-session-tabs">
+              <button class="tab-btn active" data-filter="all">All</button>
+              <button class="tab-btn" data-filter="today">Today</button>
+              <button class="tab-btn" data-filter="pending">Pending</button>
+              <button class="tab-btn" data-filter="done">Done</button>
+            </div>
+            <div class="tab-actions">
+              <div class="table-search-box">
+                <span>🔍</span>
+                <input type="text" id="full-filter-search-input" placeholder="Search topic or subject..." aria-label="Search study sessions">
+              </div>
+              <select id="full-filter-subject-select" class="session-filter-select" aria-label="Filter by Subject">
+                <option value="all">All Subjects</option>
+              </select>
+            </div>
+          </div>
+          <table class="study-table">
+            <thead><tr><th style="min-width:145px;">Topic Assessment</th><th>Due Date</th><th>Topic / Session</th><th>Subject</th><th>Est. Hours</th><th>Difficulty</th><th>Status</th></tr></thead>
+            <tbody id="full-sessions-tbody">
+              <tr><td colspan="7"><div class="empty-pane"><div class="empty-icon">📅</div><h3>No sessions scheduled</h3></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─── TAB: STUDY NOTES (Light Theme) ─── -->
+      <div class="tab-view" id="tab-view-notes">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;flex-wrap:wrap;gap:1rem;">
+          <div>
+            <h2 style="font-size:1.25rem;font-weight:700;">📝 My Study Notes &amp; Scratchpad</h2>
+            <p style="font-size:.82rem;color:var(--muted);">Personal notes workspace for formulas, revision points, and reminders. Auto-saves in real-time.</p>
+          </div>
+          <div style="display:flex;gap:.6rem;align-items:center;">
+            <span id="notes-tab-status" style="font-size:.76rem;color:var(--success);font-weight:600;">Auto-saved ✓</span>
+            <button class="btn-sm-outline" onclick="copyAllNotes()">📋 Copy Notes</button>
+            <button class="btn-sm-outline" onclick="clearNotes()" style="color:var(--danger);border-color:#fca5a5;">🗑️ Clear</button>
+            <button class="btn-save-changes" onclick="manualSaveNotes()">💾 Save Notes</button>
+          </div>
+        </div>
+        <div class="notes-editor-card">
+          <div class="notes-toolbar">
+            <span class="notes-counter" id="notes-counter-badge">0 words • 0 characters</span>
+            <span style="font-size:.74rem;color:var(--muted);">Persists securely across browser sessions</span>
+          </div>
+          <textarea id="full-notes-area" class="full-notes-textarea" placeholder="✍️ Start typing your notes, key takeaways, formulas, revision checklist..."></textarea>
+        </div>
+      </div>
+
+      <!-- ─── TAB 4: ANALYTICS ─── -->
+      <div class="tab-view" id="tab-view-progress">
+        <div style="margin-bottom:1.25rem;">
+          <h2 style="font-size:1.25rem;font-weight:700;">Study Analytics &amp; Insights</h2>
+          <p style="font-size:.82rem;color:var(--muted);">Visual breakdown of your semester productivity.</p>
+        </div>
+        <div class="analytics-grid">
+          <div class="analytics-card">
+            <h3>Completion Rate</h3>
+            <div class="stat-ring-wrap">
+              <div class="stat-ring-num" id="an-pct">0%</div>
+              <div style="font-size:.82rem;color:var(--muted);"><span id="an-done-cnt">0</span> of <span id="an-tot-cnt">0</span> sessions completed</div>
+            </div>
+          </div>
+          <div class="analytics-card">
+            <h3>Total Time Invested</h3>
+            <div class="stat-ring-wrap">
+              <div class="stat-ring-num" style="color:var(--success);" id="an-hours">0h</div>
+              <div style="font-size:.82rem;color:var(--muted);"><span id="an-rem-hours">0h</span> remaining planned study time</div>
+            </div>
+          </div>
+          <div class="analytics-card">
+            <h3>Difficulty Distribution</h3>
+            <div class="diff-breakdown" id="an-diff-bars">
+              <div class="diff-bar-row"><span>Easy</span><div class="diff-bar-track"><div class="diff-bar-fill" id="an-bar-easy" style="background:#10b981;width:0%;"></div></div><span id="an-cnt-easy">0</span></div>
+              <div class="diff-bar-row"><span>Medium</span><div class="diff-bar-track"><div class="diff-bar-fill" id="an-bar-med" style="background:#f59e0b;width:0%;"></div></div><span id="an-cnt-med">0</span></div>
+              <div class="diff-bar-row"><span>Hard</span><div class="diff-bar-track"><div class="diff-bar-fill" id="an-bar-hard" style="background:#ef4444;width:0%;"></div></div><span id="an-cnt-hard">0</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── TAB 5: UPCOMING EXAMS ─── -->
+      <div class="tab-view" id="tab-view-exams">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
+          <div><h2 style="font-size:1.25rem;font-weight:700;">Upcoming Exams &amp; Deadlines</h2><p style="font-size:.82rem;color:var(--muted);">Never miss an exam date or final submission.</p></div>
+        </div>
+        <div class="exams-grid" id="exams-full-grid">
+          <div class="panel-empty" style="grid-column:1/-1;">No exams found. Add exam dates when adding subjects or syllabus!</div>
+        </div>
+      </div>
+
+      <!-- ─── TAB: PREVIOUS-YEAR QUESTION PAPER ANALYZER ─── -->
+      <div class="tab-view" id="tab-view-pyq">
+        <div class="pyq-hero-card">
+          <div class="pyq-hero-info">
+            <h2>📑 Previous-Year <span>Question Paper Analyzer</span></h2>
+            <p>Upload university exam papers to discover frequently repeated topics, multi-year recurrence, long-answer distributions, and syllabus coverage gaps.</p>
+          </div>
+          <div class="pyq-hero-actions">
+            <button class="btn-pyq-primary" onclick="PYQManager.openUploadModal()">✨ Upload Past Papers</button>
+            <button class="btn-pyq-plan" onclick="PYQManager.openStudyPlanModal()">📅 Create Study Plan</button>
+          </div>
+        </div>
+
+        <div class="pyq-selector-bar">
+          <div class="pyq-sub-select-wrap">
+            <label for="pyq-subject-selector">Active Course / Subject:</label>
+            <select id="pyq-subject-selector" class="pyq-select-dropdown">
+              <option value="">-- Choose Course / Subject --</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:.65rem;align-items:center;">
+            <button class="btn-sm-outline" onclick="PYQManager.openUploadModal(PYQManager.activeSubjectId)">＋ Add Paper to Course</button>
+          </div>
+        </div>
+
+        <div id="pyq-main-content">
+          <!-- Dynamically populated by PYQManager -->
+        </div>
+      </div>
+    </main>
+
+    <!-- ─── PROFESSIONAL DASHBOARD FOOTER (Shown at end of scroll) ─── -->
+    <footer class="dash-footer">
+      <div class="dash-footer-main">
+        <div class="dash-footer-brand">
+          <div class="dash-footer-title">Study<span>Flow</span></div>
+          <div class="dash-footer-sub">Smart AI-Powered Study Planner &amp; Semester Schedule Tracker</div>
+        </div>
+        <div class="dash-footer-links">
+          <a href="mailto:aashirwadverma88@gmail.com" class="dash-footer-link" title="Send Email">✉️ aashirwadverma88@gmail.com</a>
+          <a href="http://www.linkedin.com/in/ashirwad-verma-98445837b" target="_blank" rel="noopener" class="dash-footer-link" title="LinkedIn Profile">💼 LinkedIn Profile</a>
+          <a href="#" class="dash-footer-link" onclick="openUploadModal();return false;">✨ AI Syllabus Parser</a>
+        </div>
+      </div>
+      <div class="dash-footer-bottom">
+        <div>© 2026 StudyFlow. Built for students who are serious about their goals.</div>
+        <div style="color:var(--muted2);font-weight:600;">Contact: aashirwadverma88@gmail.com</div>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ════════════════ MODALS ════════════════ -->
+
+  <!-- 1. SYLLABUS UPLOAD MODAL (Step 1 from Design) -->
+  <div class="modal-backdrop" id="upload-modal-backdrop">
+    <div class="modal-box" style="max-width:520px;">
+      <div class="modal-top">
+        <h2>✨ AI Syllabus Parser</h2>
+        <button class="modal-x" onclick="closeUploadModal()">✕</button>
+      </div>
+      
+      <!-- Upload Body View -->
+      <div id="upload-input-view">
+        <div class="upload-nav-tabs">
+          <button class="u-tab-btn active" data-upane="file" id="u-tab-file">📁 Upload PDF / Image / TXT</button>
+          <button class="u-tab-btn" data-upane="text" id="u-tab-text">📝 Paste Syllabus Text</button>
+        </div>
+
+        <!-- File Upload Pane -->
+        <div class="u-pane active" id="pane-file">
+          <div class="dropzone" id="syllabus-dropzone">
+            <input type="file" id="syllabus-file-input" accept=".pdf,.txt,.png,.jpg,.jpeg,.webp,application/pdf,text/plain,image/png,image/jpeg,image/webp" style="display:none;">
+            <div class="dropzone-icon">📄</div>
+            <div class="dropzone-title">Drop your syllabus here</div>
+            <div class="dropzone-sub">Drag & drop PDF, screenshot image, or TXT file</div>
+            <div class="dropzone-tags">
+              <span class="drop-tag">PDF</span>
+              <span class="drop-tag">Images / Scans</span>
+              <span class="drop-tag">TXT</span>
+              <span class="drop-tag">Up to 20MB</span>
+            </div>
+          </div>
+          <div id="selected-file-wrap" style="display:none;">
+            <div class="selected-file-chip">
+              <span id="selected-file-name">filename.pdf</span>
+              <button class="btn-remove-file" id="btn-clear-file" title="Remove file">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Text Paste Pane -->
+        <div class="u-pane" id="pane-text">
+          <div class="field-group">
+            <label>Subject / Course Name (Optional)</label>
+            <input type="text" id="paste-subject-title" placeholder="e.g. Operating Systems" class="mfield">
+          </div>
+          <div class="field-group" style="margin-top:.75rem;">
+            <label>Paste Syllabus Content / Course Outline *</label>
+            <textarea id="paste-syllabus-text" rows="7" placeholder="Paste units, topics, textbook chapters, or assignment list here..." class="mfield" style="resize:vertical;"></textarea>
+          </div>
+        </div>
+
+        <div class="field-row" style="margin-top:1rem;">
+          <div class="field-group">
+            <label>Target Exam Date (Optional)</label>
+            <input type="date" id="upload-exam-date" class="mfield">
+          </div>
+          <div class="field-group">
+            <label>Color Badge</label>
+            <select id="upload-color-tag" class="mfield">
+              <option value="#4f46e5">Indigo Accent</option>
+              <option value="#10b981">Emerald Green</option>
+              <option value="#0284c7">Sky Cyan</option>
+              <option value="#7c3aed">Royal Purple</option>
+              <option value="#f59e0b">Amber Orange</option>
+              <option value="#ec4899">Pink Coral</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="margin-top:.6rem;display:flex;justify-content:space-between;align-items:center;">
+          <button type="button" id="btn-load-sample" style="background:none;border:none;color:var(--accent);font-size:.78rem;font-weight:600;text-decoration:underline;cursor:pointer;">💡 Try Sample Data Structures Syllabus</button>
+        </div>
+
+        <div class="modal-error" id="upload-error" style="margin-top:.85rem;"></div>
+
+        <button class="modal-submit" id="btn-submit-upload" style="margin-top:1.15rem;">⚡ Analyze Syllabus with Gemini AI</button>
+      </div>
+
+      <!-- AI Loading View (Animated Scanning Sheet) -->
+      <div id="upload-loading-view" style="display:none;" class="ai-loading-box">
+        <div class="loader" id="syllabus-loader" data-mode="syllabus" role="status" aria-live="polite">
+          <div class="sheet">
+            <div class="ln"><i></i></div><div class="ln"><i></i></div><div class="ln"><i></i></div>
+            <div class="ln"><i></i></div><div class="ln"><i></i></div><div class="ln"><i></i></div>
+            <div class="ln"><i></i></div>
+            <div class="beam"></div>
+            <div class="badge">asked 4×</div>
+          </div>
+          <div class="status"><span id="ai-loading-msg">Reading your syllabus</span></div>
+          <div class="sub" id="ai-loading-sub">Finding units and topics</div>
+          <div class="bar"><b></b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. AI REVIEW & IMPORT MODAL (Step 2 & 3 from Design) -->
+  <div class="modal-backdrop" id="ai-preview-modal">
+    <div class="modal-box ai-preview-box">
+      <div class="modal-top">
+        <h2>✨ AI Extracted Study Plan</h2>
+        <button class="modal-x" onclick="closeAiPreviewModal()">✕</button>
+      </div>
+      <div class="ai-preview-scroll">
+        <div class="preview-header-card">
+          <div class="preview-title" id="prev-subject-name">Subject Name</div>
+          <div class="preview-summary" id="prev-summary">Course summary will appear here.</div>
+          <div class="preview-badges">
+            <span class="p-badge" id="prev-topics-count">0 Topics</span>
+            <span class="p-badge" id="prev-units-count">0 Units</span>
+            <span class="p-badge" id="prev-exam-badge">Exam: Not set</span>
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label>Subject Name</label>
+            <input type="text" id="prev-input-subname" class="mfield">
+          </div>
+          <div class="field-group">
+            <label>Exam Date</label>
+            <input type="date" id="prev-input-examdate" class="mfield">
+          </div>
+        </div>
+
+        <div class="preview-section-label">📋 Generated Study Sessions Schedule</div>
+        <div class="preview-table-wrap">
+          <table class="preview-table">
+            <thead><tr><th>Topic</th><th>Hours</th><th>Difficulty</th><th>Scheduled</th></tr></thead>
+            <tbody id="prev-sessions-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="margin-top:1.25rem;display:flex;gap:.75rem;">
+        <button class="btn-sm-outline" style="flex:1;" onclick="closeAiPreviewModal()">Cancel</button>
+        <button class="modal-submit" style="flex:2;" id="btn-confirm-import">🚀 Import into Semester Tracker</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. MANUAL SUBJECT MODAL -->
+  <div class="modal-backdrop" id="subject-modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-top"><h2>Add Subject</h2><button class="modal-x" onclick="closeSubjectModal()">✕</button></div>
+      <div class="modal-body">
+        <div class="field-group"><label>Subject Name *</label><input id="sub-name" type="text" placeholder="e.g. Mathematics" class="mfield"></div>
+        <div class="field-row">
+          <div class="field-group"><label>Exam Date</label><input id="sub-exam-date" type="date" class="mfield"></div>
+          <div class="field-group"><label>Color Tag</label>
+            <select id="sub-color" class="mfield">
+              <option value="#4f46e5">Indigo</option>
+              <option value="#10b981">Green</option>
+              <option value="#0284c7">Sky Blue</option>
+              <option value="#7c3aed">Purple</option>
+              <option value="#f59e0b">Amber</option>
+              <option value="#ef4444">Red</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-error" id="sub-modal-error"></div>
+        <button class="modal-submit" onclick="saveSubject()">Save Subject</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. MANUAL SESSION MODAL -->
+  <div class="modal-backdrop" id="session-modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-top"><h2>New Study Session</h2><button class="modal-x" onclick="closeSessionModal()">✕</button></div>
+      <div class="modal-body">
+        <div class="field-group"><label>Topic / Session Name *</label><input id="ses-topic" type="text" placeholder="e.g. Chapter 3 - Calculus" class="mfield"></div>
+        <div class="field-row">
+          <div class="field-group"><label>Subject *</label>
+            <select id="ses-subject" class="mfield"><option value="">Select subject...</option></select>
+          </div>
+          <div class="field-group"><label>Due Date</label><input id="ses-date" type="date" class="mfield"></div>
+        </div>
+        <div class="field-row">
+          <div class="field-group"><label>Difficulty</label>
+            <select id="ses-difficulty" class="mfield">
+              <option value="easy">Easy</option>
+              <option value="medium" selected>Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+          <div class="field-group"><label>Hours</label><input id="ses-hours" type="number" min="0.5" max="12" step="0.5" value="2" class="mfield"></div>
+        </div>
+        <div class="modal-error" id="ses-modal-error"></div>
+        <button class="modal-submit" onclick="saveSession()">Add Session</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. EDIT SUBJECT MODAL (Photo 3 Feature) -->
+  <div class="modal-backdrop" id="edit-subject-modal-backdrop">
+    <div class="modal-box">
+      <div class="modal-top">
+        <h2>✏️ Edit Subject Name</h2>
+        <button class="modal-x" onclick="closeEditSubjectModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-sub-id">
+        <div class="field-group">
+          <label>Subject / Course Name *</label>
+          <input id="edit-sub-name" type="text" placeholder="e.g. Data Structures & Algorithms" class="mfield">
+        </div>
+        <div class="field-group">
+          <label>Instructor / Course Code</label>
+          <input id="edit-sub-code" type="text" placeholder="e.g. Dr. Vikas or CS201" class="mfield">
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label>Exam Date</label>
+            <input id="edit-sub-exam-date" type="date" class="mfield">
+          </div>
+          <div class="field-group">
+            <label>Color Accent</label>
+            <select id="edit-sub-color" class="mfield">
+              <option value="#4f46e5">Indigo</option>
+              <option value="#10b981">Emerald Green</option>
+              <option value="#0284c7">Sky Blue</option>
+              <option value="#7c3aed">Royal Purple</option>
+              <option value="#f59e0b">Amber Orange</option>
+              <option value="#ef4444">Coral Red</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-error" id="edit-sub-modal-error"></div>
+        <button class="modal-submit" onclick="saveEditedSubject()">Save Subject Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. PYQ UPLOAD & MULTI-PAPER MODAL -->
+  <div class="modal-backdrop" id="pyq-upload-modal">
+    <div class="modal-box" style="max-width:580px;">
+      <div class="modal-top">
+        <h2>📑 Analyze Question Papers</h2>
+        <button class="modal-x" onclick="PYQManager.closeUploadModal()">✕</button>
+      </div>
+
+      <div id="pyq-upload-input-view">
+        <div class="field-group" style="margin-bottom:.85rem;">
+          <label>Select Enrolled Subject with Uploaded Syllabus *</label>
+          <select id="pyq-modal-subject-select" class="mfield" onchange="PYQManager.onModalSubjectChange(this.value)">
+            <option value="">-- Choose Subject with Uploaded Syllabus --</option>
+          </select>
+        </div>
+
+        <!-- Dynamic Syllabus Prerequisite Status Card -->
+        <div id="pyq-modal-syllabus-status" style="margin-bottom:1rem;"></div>
+        <div id="pyq-modal-syllabus-preview" style="display:none;margin-bottom:1rem;background:var(--bg-subtle);border:1px solid var(--border);border-radius:10px;padding:.85rem;max-height:160px;overflow-y:auto;font-size:.8rem;"></div>
+
+        <div class="field-row" style="margin-bottom:.85rem;">
+          <div class="field-group">
+            <label>Subject / Course Name *</label>
+            <input type="text" id="pyq-modal-subject-name" placeholder="e.g. Mathematics 4" class="mfield">
+          </div>
+          <div class="field-group">
+            <label>Course Code (Optional)</label>
+            <input type="text" id="pyq-modal-course-code" placeholder="e.g. KAS402 or MAT401" class="mfield">
+          </div>
+        </div>
+
+        <div class="field-row" style="margin-bottom:.85rem;">
+          <div class="field-group">
+            <label>University / College (Optional)</label>
+            <input type="text" id="pyq-modal-university" placeholder="e.g. AKTU / VTU / Mumbai" class="mfield">
+          </div>
+          <div class="field-group">
+            <label>Semester / Exam Type</label>
+            <input type="text" id="pyq-modal-semester" placeholder="e.g. Sem 4 End-Term" class="mfield">
+          </div>
+        </div>
+
+        <div class="field-group" style="margin-bottom:.85rem;">
+          <label>Target Exam Date (Optional)</label>
+          <input type="date" id="pyq-modal-exam-date" class="mfield">
+        </div>
+
+        <!-- Multi-Year Accumulation Options -->
+        <div id="pyq-modal-accumulate-box" style="display:none;margin-bottom:1rem;background:var(--accent-light);border:1px solid var(--border-accent);border-radius:10px;padding:.85rem 1rem;">
+          <div style="font-size:.85rem;font-weight:700;color:var(--accent);margin-bottom:.3rem;display:flex;align-items:center;gap:.4rem;">
+            <span>📚</span> Multi-Year Cumulative Analysis
+          </div>
+          <div style="font-size:.78rem;color:var(--text-secondary);margin-bottom:.65rem;line-height:1.45;" id="pyq-modal-existing-papers-note">
+            Found existing analyzed papers for this subject.
+          </div>
+          <div style="display:flex;flex-direction:column;gap:.4rem;font-size:.8rem;color:var(--text);">
+            <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;">
+              <input type="radio" name="pyq_upload_mode" id="pyq-mode-accumulate" value="accumulate" checked>
+              <span><strong>Combine &amp; Accumulate</strong> (Recommended — recalculate priority trends across all years)</span>
+            </label>
+            <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;">
+              <input type="radio" name="pyq_upload_mode" id="pyq-mode-replace" value="replace">
+              <span>Start Fresh (Replace previous papers with new upload)</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>Upload Question Paper PDFs (Multiple files supported)</label>
+          <div class="dropzone" id="pyq-modal-dropzone" style="padding:1.4rem;">
+            <input type="file" id="pyq-modal-file-input" multiple accept=".pdf,.txt,.png,.jpg,.jpeg,.webp,application/pdf,text/plain,image/png,image/jpeg,image/webp" style="display:none;">
+            <div class="dropzone-icon" style="font-size:2rem;">📁</div>
+            <div class="dropzone-title" style="font-size:.95rem;">Drop multiple previous year papers here</div>
+            <div class="dropzone-sub">Upload 2024, 2023, 2022, 2021 papers for multi-year recurrence analysis</div>
+          </div>
+        </div>
+
+        <div id="pyq-upload-files-list"></div>
+
+        <!-- Optional text paste fallback -->
+        <details style="margin-top:.85rem;background:var(--bg-subtle);border:1px solid var(--border);border-radius:8px;padding:.6rem .85rem;">
+          <summary style="cursor:pointer;font-size:.8rem;color:var(--muted);font-weight:600;">Optional: Or paste question text directly</summary>
+          <div style="margin-top:.6rem;">
+            <textarea id="pyq-modal-pasted-text" rows="4" class="mfield" placeholder="Paste questions with marks e.g. 1(a) Explain Booth's algorithm [10 Marks]..."></textarea>
+          </div>
+        </details>
+
+        <div class="modal-error" id="pyq-upload-error" style="margin-top:.85rem;"></div>
+
+        <button class="modal-submit" style="margin-top:1.15rem;" onclick="PYQManager.submitUploadAndAnalyze()">
+          ⚡ Extract Questions &amp; Calculate Topic Priorities
+        </button>
+      </div>
+
+      <!-- AI Loading View (Animated Scanning Sheet for PYQ) -->
+      <div id="pyq-upload-loading-view" style="display:none;" class="ai-loading-box">
+        <div class="loader" id="pyq-loader" data-mode="pyq" role="status" aria-live="polite">
+          <div class="sheet">
+            <div class="ln"><i></i></div><div class="ln"><i></i></div><div class="ln"><i></i></div>
+            <div class="ln"><i></i></div><div class="ln"><i></i></div><div class="ln"><i></i></div>
+            <div class="ln"><i></i></div>
+            <div class="beam"></div>
+            <div class="badge">asked 4×</div>
+          </div>
+          <div class="status"><span id="pyq-loading-msg">Scanning previous papers</span></div>
+          <div class="sub" id="pyq-loading-sub">Analyzing past exam questions</div>
+          <div class="bar"><b></b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. RECLASSIFY QUESTION MODAL -->
+  <div class="modal-backdrop" id="pyq-reclassify-modal">
+    <div class="modal-box" style="max-width:500px;">
+      <div class="modal-top">
+        <h2>✏️ Correct Topic Classification</h2>
+        <button class="modal-x" onclick="PYQManager.closeReclassifyModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="reclass-question-id">
+        <div style="font-size:.82rem;color:var(--text-secondary);background:var(--bg-subtle);padding:.75rem .95rem;border-radius:8px;border:1px solid var(--border);max-height:100px;overflow-y:auto;line-height:1.45;" id="reclass-qtext">
+          Question text...
+        </div>
+        <div class="field-group">
+          <label>Matched Academic Topic *</label>
+          <input type="text" id="reclass-topic" class="mfield" placeholder="e.g. Cache Memory & Mapping Techniques">
+        </div>
+        <div class="field-row">
+          <div class="field-group">
+            <label>Detected Unit</label>
+            <input type="text" id="reclass-unit" class="mfield" placeholder="e.g. Unit 4: Memory">
+          </div>
+          <div class="field-group">
+            <label>Question Marks</label>
+            <input type="number" id="reclass-marks" class="mfield" placeholder="e.g. 10">
+          </div>
+        </div>
+        <div class="field-group">
+          <label>Student Notes (Optional)</label>
+          <input type="text" id="reclass-notes" class="mfield" placeholder="e.g. Verified from textbook chapter 5">
+        </div>
+        <button class="modal-submit" onclick="PYQManager.saveReclassification()">💾 Save &amp; Recalculate Priorities</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 8. CREATE STUDY PLAN FROM ANALYSIS MODAL -->
+  <div class="modal-backdrop" id="pyq-plan-modal">
+    <div class="modal-box" style="max-width:540px;">
+      <div class="modal-top">
+        <h2>📅 Create Study Plan from Analysis</h2>
+        <button class="modal-x" onclick="PYQManager.closeStudyPlanModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size:.85rem;color:var(--text-secondary);line-height:1.5;">
+          StudyFlow will transfer the prioritized topics for <strong id="plan-modal-subname" style="color:var(--accent);">Subject</strong> directly into your study schedule, assigning high-yield topics first with dedicated study hours.
+        </p>
+
+        <div class="field-row">
+          <div class="field-group">
+            <label>Target Exam Date</label>
+            <input type="date" id="plan-modal-exam-date" class="mfield">
+          </div>
+          <div class="field-group">
+            <label>Daily Study Hours</label>
+            <input type="number" id="plan-modal-hours" min="1" max="10" step="0.5" value="3.0" class="mfield">
+          </div>
+        </div>
+
+        <div class="field-group">
+          <label>Prioritized Topic Breakdown</label>
+          <div id="plan-modal-topics-list" style="max-height:180px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:.5rem;"></div>
+        </div>
+
+        <div style="font-size:.76rem;color:var(--muted);line-height:1.4;">
+          ✓ Preserves your existing timetable engine while scheduling high-yield exam topics earlier in the study timeline.
+        </div>
+
+        <button class="modal-submit" onclick="PYQManager.confirmGenerateStudyPlan()">🚀 Generate &amp; Apply to StudyFlow Schedule</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. AI TOPIC ASSESSMENT MODAL (StudyFlow v2.0 - FR-03, FR-04, FR-05, FR-06, FR-07, FR-08, FR-09) -->
+  <div class="modal-backdrop" id="assessment-modal">
+    <div class="modal-box assessment-modal-box">
+      <!-- Modal Top -->
+      <div class="modal-top" style="align-items:flex-start; margin-bottom:.75rem;">
+        <div>
+          <div class="assessment-header-badge" id="assessment-subject-badge">📚 Subject Name</div>
+          <h2 id="assessment-topic-title" style="font-size:1.2rem; font-weight:800; color:var(--text); line-height:1.35;">Topic Name</h2>
+        </div>
+        <button class="modal-x" onclick="AssessmentManager.closeModal()">✕</button>
+      </div>
+
+      <!-- VIEW 1: LOADING STATE -->
+      <div id="assessment-loading-view" class="quiz-loading-view" style="display:none;">
+        <div class="quiz-spinner"></div>
+        <h3 id="assessment-loading-title" style="font-size:1.15rem; font-weight:700; color:var(--text); margin-bottom:.5rem;">Analyzing Syllabus &amp; Exam Papers...</h3>
+        <p id="assessment-loading-sub" style="font-size:.86rem; color:var(--muted); max-width:440px; margin:0 auto; line-height:1.5;">
+          Generating a calibrated 10-question multiple-choice assessment grounded in your syllabus and university past papers.
+        </p>
+      </div>
+
+      <!-- VIEW 2: ACTIVE 10-QUESTION ASSESSMENT INTERFACE -->
+      <div id="assessment-quiz-view" style="display:none; flex:1; min-height:0; flex-direction:column; overflow:hidden;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-size:.84rem; font-weight:700; color:var(--accent);">
+            Question <span id="quiz-question-curr">1</span> of 10
+          </span>
+          <span id="quiz-answered-count" style="font-size:.78rem; font-weight:600; color:var(--muted);">
+            0 of 10 answered
+          </span>
+        </div>
+
+        <div class="quiz-progress-bar-wrap">
+          <div class="quiz-progress-bar-fill" id="quiz-progress-fill" style="width:10%;"></div>
+        </div>
+
+        <!-- 10 Question Navigation Pills -->
+        <div class="quiz-nav-pills" id="quiz-nav-pills"></div>
+
+        <!-- Scrollable Question Display & Options (Ensures entire question & all options are scrollable on any screen) -->
+        <div class="quiz-scroll-area" id="quiz-scroll-area">
+          <!-- Current Question Display -->
+          <div class="quiz-question-box">
+            <div class="quiz-meta-row">
+              <span id="quiz-q-prov" class="quiz-prov-badge">📚 Syllabus Grounded</span>
+              <span id="quiz-q-diff" class="diff-dot" style="background:#fbbf24; font-size:.74rem; font-weight:700; padding:.2rem .6rem; border-radius:99px; color:#ffffff;">Medium</span>
+            </div>
+            <div class="quiz-question-text" id="quiz-q-text">Loading question text...</div>
+          </div>
+
+          <!-- 4 Options -->
+          <div class="quiz-options-grid" id="quiz-options-container"></div>
+        </div>
+
+        <!-- 10 Questions Completed Banner (Prompt to Check Answers) -->
+        <div id="quiz-all-answered-banner" class="quiz-all-answered-banner" style="display:none;">
+          <div style="display:flex; align-items:center; gap:.65rem;">
+            <span style="font-size:1.3rem;">✨</span>
+            <div>
+              <div style="font-weight:700; color:var(--success-text); font-size:.88rem;">All 10 Questions Answered!</div>
+              <div style="font-size:.76rem; color:var(--success-text); opacity:0.85;">Click "Check Answers &amp; Submit" to verify if your answers are right.</div>
+            </div>
+          </div>
+          <button type="button" class="btn-quiz-submit" onclick="AssessmentManager.confirmSubmit()" style="padding:.45rem 1rem; font-size:.82rem; white-space:nowrap;">Check Answers →</button>
+        </div>
+
+        <!-- Navigation & Submit Footer (Always Pinned at Bottom, Never Cut Off) -->
+        <div class="quiz-modal-footer">
+          <button type="button" class="btn-quiz-nav" id="btn-quiz-prev" onclick="AssessmentManager.prevQuestion()">← Previous</button>
+          <div style="display:flex; gap:.6rem; align-items:center;">
+            <button type="button" class="btn-quiz-nav" id="btn-quiz-next" onclick="AssessmentManager.nextQuestion()">Next →</button>
+            <button type="button" class="btn-quiz-submit" id="btn-quiz-submit" onclick="AssessmentManager.confirmSubmit()">
+              <span>Check Answers &amp; Submit 🚀</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- VIEW 3: PASSING RESULT SCREEN (Score >= 8/10) -->
+      <div id="assessment-result-pass-view" style="display:none; overflow-y:auto; padding-right:.4rem;">
+        <div class="quiz-result-header">
+          <span class="result-status-icon">🏆</span>
+          <h2 style="font-size:1.45rem; font-weight:800; color:var(--text); margin-bottom:.3rem;">Assessment Passed!</h2>
+          <p id="pass-subtitle-msg" style="font-size:.88rem; color:var(--success-text); font-weight:600;">More than 7 answers were correct! Topic automatically verified and marked as Completed.</p>
+        </div>
+
+        <div class="result-card-passed">
+          <div class="result-score-number" id="pass-score-display">9 / 10</div>
+          <div class="result-explanation-banner" id="pass-pct-display">90% Conceptual Accuracy</div>
+          <div style="font-size:.82rem; color:var(--muted); margin-top:.4rem;">
+            Qualifying threshold met (more than 7 correct, ≥ 8/10). Topic assessment marked as Completed in your study schedule!
+          </div>
+        </div>
+
+        <!-- Achievement Email Status Badge -->
+        <div id="pass-email-status-box" style="background:var(--accent-light); border:1px solid var(--border-accent); border-radius:12px; padding:.85rem 1.1rem; margin-bottom:1.15rem; display:flex; align-items:center; gap:.75rem; font-size:.84rem;">
+          <span style="font-size:1.2rem;">📧</span>
+          <span id="pass-email-status-text">Achievement notification: queued for delivery.</span>
+        </div>
+
+        <!-- Next Step CTA: Practise Previous-Year Questions (FR-09) -->
+        <div class="pyq-practice-banner">
+          <div class="pyq-practice-header">
+            <div class="pyq-practice-title">🎯 Now Practise Previous-Year Questions</div>
+            <span class="score-pill" style="background:var(--success-bg); color:var(--success-text); font-weight:700; border:1px solid var(--success-border);">Recommended Next Step</span>
+          </div>
+          <p style="font-size:.82rem; color:var(--muted); line-height:1.45; margin-bottom:.65rem;">
+            Solidify your exam readiness with authentic university questions mapped to this topic.
+          </p>
+          <div id="pass-pyq-questions-list"></div>
+          <div style="margin-top:1rem; display:flex; justify-content:flex-end;">
+            <button class="btn-sm-outline" id="btn-mark-pyq-practiced" onclick="AssessmentManager.markPYQPracticed()" style="border-color:var(--success); color:var(--success-text);">✓ Mark PYQs Practiced</button>
+          </div>
+        </div>
+
+        <!-- Review Answers Accordion -->
+        <details style="background:var(--bg-subtle); border:1px solid var(--border); border-radius:12px; padding:.9rem 1.1rem; margin-bottom:1.2rem; cursor:pointer;">
+          <summary style="font-weight:700; color:var(--accent); font-size:.9rem;">Review All 10 Questions &amp; Detailed Explanations</summary>
+          <div id="pass-review-list" style="margin-top:1rem;"></div>
+        </details>
+
+        <div style="display:flex; justify-content:flex-end; gap:.75rem;">
+          <button class="modal-submit" onclick="AssessmentManager.closeModalAndRefresh()" style="width:100%;">✓ Return to Study Planner</button>
+        </div>
+      </div>
+
+      <!-- VIEW 4: FAILING RESULT SCREEN (Score <= 7/10 - "You need revision") -->
+      <div id="assessment-result-fail-view" style="display:none; overflow-y:auto; padding-right:.4rem;">
+        <div class="quiz-result-header">
+          <span class="result-status-icon">⚠️</span>
+          <h2 style="font-size:1.45rem; font-weight:800; color:var(--warning-text); margin-bottom:.3rem;">You need revision.</h2>
+          <p id="fail-subtitle-msg" style="font-size:.88rem; color:var(--text-secondary);">Not more than 7 answers were correct. Please revise the concepts below and do the assessment again.</p>
+        </div>
+
+        <div class="result-card-failed">
+          <div class="result-score-number" id="fail-score-display">6 / 10</div>
+          <div class="result-explanation-banner" id="fail-pct-display">60% Score (Pass Mark: 8/10)</div>
+          <div style="font-size:.84rem; color:var(--warning-text); margin-top:.4rem; font-weight:600;" id="fail-rule-explanation">
+            Not more than 7 answers were correct. Topic remains incomplete. Please revise and do the assessment again!
+          </div>
+          <!-- Weak Concepts Tags -->
+          <div class="weak-concepts-wrap" id="fail-weak-concepts-list"></div>
+        </div>
+
+        <!-- Incorrect Questions Review with Explanations -->
+        <div style="margin-bottom:1.3rem;">
+          <div style="font-weight:700; color:var(--text); font-size:.92rem; margin-bottom:.65rem;">
+            Answer Explanations &amp; Misunderstood Concepts:
+          </div>
+          <div id="fail-review-list"></div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div style="display:flex; gap:.75rem; flex-wrap:wrap;">
+          <button class="btn-sm-outline" onclick="AssessmentManager.openNotesForTopic()" style="flex:1;">📖 Revise Topic Notes</button>
+          <button class="modal-submit" onclick="AssessmentManager.retakeAssessment()" style="flex:1.2; background:var(--accent); font-weight:700;">🔄 Revise &amp; Do Assessment Again</button>
+        </div>
+      </div>
+
+      <!-- VIEW 5: ERROR VIEW -->
+      <div id="assessment-error-view" style="display:none; text-align:center; padding:2.5rem 1rem;">
+        <div style="font-size:42px; margin-bottom:.75rem;">⚠️</div>
+        <h3 style="font-size:1.15rem; color:#f87171; font-weight:700; margin-bottom:.5rem;">Assessment Notice</h3>
+        <p id="assessment-error-msg" style="color:var(--muted); font-size:.88rem; max-width:440px; margin:0 auto 1.25rem;">Could not load questions.</p>
+        <button class="modal-submit" onclick="AssessmentManager.retryLoad()">Try Again</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- NOTIFICATION SETTINGS MODAL -->
+  <div class="modal-backdrop" id="notification-settings-modal">
+    <div class="modal-box" style="max-width:480px;">
+      <div class="modal-top">
+        <h2>Notification Settings</h2>
+        <button class="modal-x" onclick="closeNotificationSettingsModal()">✕</button>
+      </div>
+      <div class="modal-body" style="padding-top:1rem;">
+        <p style="font-size:.88rem; color:var(--muted); line-height:1.5; margin-bottom:1.25rem;">
+          Configure your achievement email alerts. When you pass a 10-question assessment (≥ 8/10), StudyFlow can notify you with your score and recommended exam PYQs.
+        </p>
+
+        <div style="background:var(--bg-subtle); border:1px solid var(--border); border-radius:12px; padding:1.1rem; display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-weight:700; color:var(--text); font-size:.95rem;">Achievement Unlocked Emails</div>
+            <div style="font-size:.78rem; color:var(--muted); margin-top:.2rem;">Receive achievement badges and PYQ recommendations upon completing topics</div>
+          </div>
+          <label style="position:relative; display:inline-block; width:48px; height:26px; cursor:pointer;">
+            <input type="checkbox" id="setting-achievement-emails" checked style="opacity:0; width:0; height:0;" onchange="toggleAchievementEmailCheckbox(this.checked)">
+            <span class="slider" style="position:absolute; cursor:pointer; top:0; left:0; right:0; bottom:0; background-color:var(--accent); transition:.3s; border-radius:99px;" id="slider-achievement-emails"></span>
+          </label>
+        </div>
+
+        <div id="settings-email-note" style="font-size:.78rem; color:var(--muted); margin-top:1rem;">
+          Emails are sent to your verified student account address.
+        </div>
+
+        <div style="margin-top:1.5rem; display:flex; justify-content:flex-end; gap:.65rem;">
+          <button class="btn-sm-outline" onclick="closeNotificationSettingsModal()">Cancel</button>
+          <button class="modal-submit" onclick="saveNotificationPreferencesFromModal()">Save Preferences</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script src="./js/auth.js"></script>
+  <script src="./js/pyq.js"></script>
+  <script src="./js/assessment.js"></script>
+
+  <script>
+    // ─── STATE MANAGEMENT (User isolated & cloud synchronized) ──
+    function getCurrentUserId() {
+      if (window.currentUser) {
+        return window.currentUser._id || window.currentUser.id || window.currentUser.email || 'anon';
+      }
+      try {
+        const cached = localStorage.getItem('studyflow_auth_user');
+        if (cached) {
+          const u = JSON.parse(cached);
+          return u._id || u.id || u.email || 'anon';
+        }
+      } catch (e) {}
+      return 'anon';
+    }
+
+    const getUserKey = (suffix) => `sf_user_${getCurrentUserId()}_${suffix}`;
+
+    const getSubs = () => {
+      try {
+        return JSON.parse(localStorage.getItem(getUserKey('subjects')) || '[]');
+      } catch (e) {
+        return [];
+      }
+    };
+    const getSess = () => {
+      try {
+        return JSON.parse(localStorage.getItem(getUserKey('sessions')) || '[]');
+      } catch (e) {
+        return [];
+      }
+    };
+    const getActs = () => {
+      try {
+        return JSON.parse(localStorage.getItem(getUserKey('activity')) || '[]');
+      } catch (e) {
+        return [];
+      }
+    };
+    const getNotes = () => {
+      try {
+        return localStorage.getItem(getUserKey('notes')) || '';
+      } catch (e) {
+        return '';
+      }
+    };
+
+    const saveSubs = (d) => {
+      localStorage.setItem(getUserKey('subjects'), JSON.stringify(d));
+      syncToServer();
+    };
+    const saveSess = (d) => {
+      localStorage.setItem(getUserKey('sessions'), JSON.stringify(d));
+      syncToServer();
+    };
+    const saveActs = (d) => {
+      localStorage.setItem(getUserKey('activity'), JSON.stringify(d));
+      syncToServer();
+    };
+    const saveNotes = (n) => {
+      localStorage.setItem(getUserKey('notes'), n || '');
+      syncToServer();
+    };
+
+    function addAct(msg) {
+      const a = getActs();
+      a.unshift({ msg, time: Date.now() });
+      if (a.length > 25) a.pop();
+      saveActs(a);
+    }
+
+    let syncTimeout = null;
+    function syncToServer() {
+      if (syncTimeout) clearTimeout(syncTimeout);
+      syncTimeout = setTimeout(() => {
+        if (window.AuthManager && window.currentUser) {
+          AuthManager.syncUserData({
+            subjects: getSubs(),
+            sessions: getSess(),
+            activity: getActs(),
+            notes: { content: getNotes() }
+          });
+        }
+      }, 400);
+    }
+
+    function todayStr(){return new Date().toISOString().split('T')[0];}
+    function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+    function fmtDate(str){if(!str)return'—';const d=new Date(str+'T00:00:00');return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});}
+    function daysFrom(str){if(!str)return null;return Math.ceil((new Date(str+'T00:00:00')-new Date(todayStr()+'T00:00:00'))/86400000);}
+    function timeAgo(ts){const d=Date.now()-ts;if(d<60000)return'just now';if(d<3600000)return Math.floor(d/60000)+'m ago';if(d<86400000)return Math.floor(d/3600000)+'h ago';return Math.floor(d/86400000)+'d ago';}
+
+    // Toast message
+    function showToast(msg, icon='✨'){
+      const tc=document.getElementById('toast-container'),t=document.createElement('div');
+      t.className='toast';t.innerHTML=`<span>${icon}</span> <span>${msg}</span>`;
+      tc.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(10px)';t.style.transition='all .3s';setTimeout(()=>t.remove(),300);},3200);
+    }
+
+    // ─── DATE DISPLAY ─────────────────────────────────────────
+    const dateEl=document.getElementById('today-date');
+    if(dateEl) dateEl.textContent=new Date().toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+
+    // ─── SIDEBAR COLLAPSE / EXPAND (Full page space) ──────────
+    const collapseBtn=document.getElementById('btn-sidebar-collapse');
+    const topbarToggleBtn=document.getElementById('btn-topbar-sidebar-toggle');
+    function toggleSidebarCollapse(){
+      document.body.classList.toggle('sidebar-collapsed');
+      if(collapseBtn){
+        collapseBtn.textContent=document.body.classList.contains('sidebar-collapsed')?'▶':'◀';
+      }
+    }
+    if(collapseBtn) collapseBtn.addEventListener('click', toggleSidebarCollapse);
+    if(topbarToggleBtn) topbarToggleBtn.addEventListener('click', toggleSidebarCollapse);
+
+    // Sidebar mobile toggle
+    const sidebar=document.getElementById('sidebar');
+    const mobToggle=document.getElementById('sidebar-toggle');
+    if(mobToggle) mobToggle.addEventListener('click',()=>sidebar.classList.toggle('open'));
+    document.addEventListener('click',e=>{
+      if(window.innerWidth<=900&&sidebar&&!sidebar.contains(e.target)&&mobToggle&&e.target!==mobToggle){
+        sidebar.classList.remove('open');
+      }
+    });
+
+    // ─── TAB NAVIGATION ───────────────────────────────────────
+    let currentMainTab='home';
+    document.querySelectorAll('.sidebar-nav .nav-item').forEach(item=>{
+      item.addEventListener('click',()=>{
+        const tab=item.dataset.tab;if(!tab)return;
+        document.querySelectorAll('.sidebar-nav .nav-item').forEach(i=>i.classList.remove('active'));
+        item.classList.add('active');
+        currentMainTab=tab;
+        document.querySelectorAll('.tab-view').forEach(v=>v.classList.remove('active'));
+        const targetView=document.getElementById('tab-view-'+tab);
+        if(targetView)targetView.classList.add('active');
+        
+        const titles={
+          home:'Dashboard <span>Overview</span>',
+          subjects:'My <span>Subjects</span>',
+          sessions:'Study <span>Sessions</span>',
+          pyq:'PYQ <span>Analyzer</span>',
+          notes:'Study <span>Notes</span>',
+          progress:'Study <span>Analytics</span>',
+          exams:'Upcoming <span>Exams</span>'
+        };
+        const titleEl=document.getElementById('topbar-page-title');
+        if(titleEl) titleEl.innerHTML=titles[tab]||'Dashboard';
+        if(tab==='pyq'&&window.PYQManager){
+          window.PYQManager.populateSubjectDropdown();
+        }
+        renderAll();
+        if(window.innerWidth<=900&&sidebar)sidebar.classList.remove('open');
+      });
+    });
+
+    // ─── RENDER ALL ───────────────────────────────────────────
+    function renderAll(){
+      const subs=getSubs(),sess=getSess(),acts=getActs();
+
+      const setT=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
+      const setH=(id,val)=>{const el=document.getElementById(id);if(el)el.innerHTML=val;};
+
+      // Stats
+      setT('stat-subjects', subs.length);
+      setT('badge-subjects', subs.length);
+      const done=sess.filter(s=>s.status==='done'||s.status==='completed').length;
+      setT('stat-done', done);
+      setT('stat-total-sessions', sess.length);
+      setT('badge-sessions', sess.length);
+      const hrs=sess.filter(s=>s.status==='done'||s.status==='completed').reduce((a,s)=>a+(parseFloat(s.hours)||0),0);
+      setT('stat-hours', hrs.toFixed(1)+'h');
+      
+      const upcomingExams=subs.filter(s=>{const d=daysFrom(s.examDate);return d!==null&&d>=0&&d<=30;});
+      setT('stat-exams', upcomingExams.length);
+      setT('badge-exams', upcomingExams.length);
+
+      // Onboarding Card
+      const obCard=document.getElementById('onboarding-card');
+      if(obCard) obCard.style.display=subs.length===0?'flex':'none';
+
+      // 1. Dashboard Exam List
+      const el=document.getElementById('exam-list');
+      if(el){
+        const withExam=subs.filter(s=>s.examDate).sort((a,b)=>a.examDate.localeCompare(b.examDate));
+        if(!withExam.length){el.innerHTML='<div class="panel-empty">No upcoming exams added</div>';}
+        else{el.innerHTML=withExam.slice(0,4).map(s=>{
+          const d=new Date(s.examDate+'T00:00:00'),days=daysFrom(s.examDate);
+          const month=d.toLocaleDateString('en-IN',{month:'short'}),day=d.getDate();
+          let cc='ec-ok',ct=days+'d away';
+          if(days<0){ct='Past';cc='';}else if(days===0){ct='Today!';cc='ec-soon';}else if(days<=3)cc='ec-soon';
+          return`<div class="exam-item"><div class="exam-date-box"><div class="edb-month">${month}</div><div class="edb-day">${day}</div></div><div class="exam-info"><div class="exam-name">${escH(s.name)}</div></div><span class="exam-countdown ${cc}">${ct}</span></div>`;
+        }).join('');}
+      }
+
+      // 2. Dashboard Subject Progress
+      const spl=document.getElementById('subject-progress-list');
+      if(spl){
+        if(!subs.length){spl.innerHTML='<div class="panel-empty">No subjects yet</div>';}
+        else{spl.innerHTML=subs.map(s=>{
+          const tot=sess.filter(x=>x.subjectId===s.id).length,dn=sess.filter(x=>x.subjectId===s.id&&(x.status==='done'||x.status==='completed')).length;
+          const pct=tot?Math.round(dn/tot*100):0;
+          return`<div class="subject-item"><div class="subject-row"><span class="subject-name"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${s.color||'#4f46e5'};margin-right:7px;"></span>${escH(s.name)}</span><span class="subject-pct">${pct}% (${dn}/${tot})</span></div><div class="progress-track"><div class="progress-fill" style="width:${pct}%;background:${s.color||'#4f46e5'};"></div></div></div>`;
+        }).join('');}
+      }
+
+      // 3. Dashboard Activity
+      const al=document.getElementById('activity-list');
+      if(al){
+        const ac=['#4f46e5','#10b981','#0284c7','#7c3aed','#f59e0b','#ec4899'];
+        if(!acts.length){al.innerHTML='<div class="panel-empty">No activity yet</div>';}
+        else{al.innerHTML=acts.slice(0,6).map((a,i)=>`<div class="update-item"><div class="update-dot" style="background:${ac[i%ac.length]}"></div><div><div class="update-text">${a.msg}</div><div class="update-time">${timeAgo(a.time)}</div></div></div>`).join('');}
+      }
+      setT('activity-badge', acts.length + ' total');
+
+      // 4. Dashboard Sessions Table
+      renderSessionsTable(sess,curFilter);
+
+      // 5. My Subjects Tab Grid (Photo 3 with Edit Option & Save Changes)
+      const sfg=document.getElementById('subjects-full-grid');
+      if(sfg){
+        if(!subs.length){sfg.innerHTML='<div class="panel-empty" style="grid-column:1/-1;">No subjects added yet. Click <strong>Upload Syllabus</strong> to auto-generate courses!</div>';}
+        else{sfg.innerHTML=subs.map(s=>{
+          const tot=sess.filter(x=>x.subjectId===s.id).length,dn=sess.filter(x=>x.subjectId===s.id&&(x.status==='done'||x.status==='completed')).length;
+          const pct=tot?Math.round(dn/tot*100):0;
+          const color=s.color||'#4f46e5';
+          const unitsList=s.units&&s.units.length?s.units.map(u=>`<div class="unit-pill">📚 Unit ${u.unitNumber||''}: ${escH(u.title||'Topics')}</div>`).join(''):'<div class="unit-pill" style="color:var(--muted);">Standard syllabus track</div>';
+          return`<div class="subject-card">
+            <div class="subject-card-bar" style="background:${color};"></div>
+            <div class="subject-card-head">
+              <div><div class="subject-card-title">${escH(s.name)}</div><span style="font-size:.74rem;color:${color};font-weight:700;">${s.instructor||s.courseCode||'Active Course'}</span></div>
+              <span class="subject-card-code">${pct}% Done</span>
+            </div>
+            <div class="subject-card-meta">
+              <span>📅 Exam: ${fmtDate(s.examDate)}</span>
+              <span>📝 ${tot} Sessions</span>
+            </div>
+            <div class="subject-card-units">${unitsList}</div>
+            <div class="subject-card-footer">
+              <span style="font-size:.76rem;color:var(--muted);">${dn} of ${tot} completed</span>
+              <div style="display:flex;gap:.35rem;align-items:center;">
+                <button class="btn-edit-sub" onclick="openEditSubjectModal('${s.id}')" title="Edit Subject Name & Details">✏️ Edit</button>
+                <button class="btn-del-sub" onclick="deleteSubject('${s.id}')" title="Delete Subject">🗑️ Remove</button>
+              </div>
+            </div>
+          </div>`;
+        }).join('');}
+      }
+
+      // 6. Full Sessions Tab Table
+      renderFullSessionsTable(sess);
+
+      // 7. Analytics Tab Data
+      const totSessions=sess.length,doneSessions=done;
+      const compPct=totSessions?Math.round((doneSessions/totSessions)*100):0;
+      setT('an-pct', compPct+'%');
+      setT('an-done-cnt', doneSessions);
+      setT('an-tot-cnt', totSessions);
+      setT('an-hours', hrs.toFixed(1)+'h');
+      const remHrs=sess.filter(s=>s.status!=='done').reduce((a,s)=>a+(parseFloat(s.hours)||0),0);
+      setT('an-rem-hours', remHrs.toFixed(1)+'h');
+      
+      const easyCnt=sess.filter(s=>s.difficulty==='easy').length;
+      const medCnt=sess.filter(s=>s.difficulty==='medium'||!s.difficulty).length;
+      const hardCnt=sess.filter(s=>s.difficulty==='hard').length;
+      setT('an-cnt-easy', easyCnt);
+      setT('an-cnt-med', medCnt);
+      setT('an-cnt-hard', hardCnt);
+      if(totSessions>0){
+        const be=document.getElementById('an-bar-easy'),bm=document.getElementById('an-bar-med'),bh=document.getElementById('an-bar-hard');
+        if(be) be.style.width=(easyCnt/totSessions*100)+'%';
+        if(bm) bm.style.width=(medCnt/totSessions*100)+'%';
+        if(bh) bh.style.width=(hardCnt/totSessions*100)+'%';
+      }
+
+      // 8. Exams Tab Grid
+      const efg=document.getElementById('exams-full-grid');
+      if(efg){
+        const withExam=subs.filter(s=>s.examDate).sort((a,b)=>a.examDate.localeCompare(b.examDate));
+        if(!withExam.length){efg.innerHTML='<div class="panel-empty" style="grid-column:1/-1;">No exams tracked yet. Set exam dates when uploading or creating subjects.</div>';}
+        else{efg.innerHTML=withExam.map(s=>{
+          const d=new Date(s.examDate+'T00:00:00'),days=daysFrom(s.examDate);
+          const month=d.toLocaleDateString('en-IN',{month:'long'}),day=d.getDate(),year=d.getFullYear();
+          let cc='ec-ok',ct=days+' Days Remaining';
+          if(days<0){ct='Completed / Past';cc='';}else if(days===0){ct='Today!';cc='ec-soon';}else if(days<=3)cc='ec-soon';
+          return`<div class="exam-card">
+            <div class="subject-card-bar" style="background:${s.color||'#4f46e5'};"></div>
+            <div class="exam-card-head">
+              <div><div class="exam-card-month">${month} ${year}</div><div class="exam-card-date">${day}</div></div>
+              <span class="exam-countdown ${cc}">${ct}</span>
+            </div>
+            <div style="font-size:1.05rem;font-weight:700;color:var(--text);margin-bottom:.3rem;">${escH(s.name)}</div>
+            <div style="font-size:.8rem;color:var(--muted);margin-bottom:.75rem;">Final Exam / Assessment</div>
+            <div style="padding-top:.75rem;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+              <span style="font-size:.76rem;color:var(--text-secondary);font-weight:600;">Status: Scheduled</span>
+            </div>
+          </div>`;
+        }).join('');}
+      }
+
+      populateSubjectSelect(subs);
+    }
+
+    // ─── FILTER & LIVE SEARCH SESSIONS TABLE ──────────────────
+    let curFilter='all';
+    let fullCurFilter='all';
+    let curSubjectFilter='all';
+    let searchKeyword='';
+
+    const searchInput1=document.getElementById('filter-search-input');
+    const searchInput2=document.getElementById('full-filter-search-input');
+
+    function handleSearchInput(e){
+      searchKeyword=e.target.value.toLowerCase().trim();
+      if(searchInput1&&searchInput1!==e.target) searchInput1.value=e.target.value;
+      if(searchInput2&&searchInput2!==e.target) searchInput2.value=e.target.value;
+      renderSessionsTable(getSess(),curFilter);
+      renderFullSessionsTable(getSess());
+    }
+
+    if(searchInput1) searchInput1.addEventListener('input', handleSearchInput);
+    if(searchInput2) searchInput2.addEventListener('input', handleSearchInput);
+
+    const sessTabs=document.getElementById('session-tabs');
+    if(sessTabs){
+      sessTabs.addEventListener('click',e=>{
+        const btn=e.target.closest('.tab-btn');if(!btn)return;
+        document.querySelectorAll('#session-tabs .tab-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');curFilter=btn.dataset.filter;
+        renderSessionsTable(getSess(),curFilter);
+      });
+    }
+
+    const fullTabs=document.getElementById('full-session-tabs');
+    if(fullTabs){
+      fullTabs.addEventListener('click',e=>{
+        const btn=e.target.closest('.tab-btn');if(!btn)return;
+        document.querySelectorAll('#full-session-tabs .tab-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');fullCurFilter=btn.dataset.filter;
+        renderFullSessionsTable(getSess());
+      });
+    }
+
+    const subFilterSel=document.getElementById('filter-subject-select');
+    if(subFilterSel){
+      subFilterSel.addEventListener('change',e=>{
+        curSubjectFilter=e.target.value;
+        const other=document.getElementById('full-filter-subject-select');
+        if(other)other.value=curSubjectFilter;
+        renderSessionsTable(getSess(),curFilter);
+        renderFullSessionsTable(getSess());
+      });
+    }
+
+    const fullSubFilterSel=document.getElementById('full-filter-subject-select');
+    if(fullSubFilterSel){
+      fullSubFilterSel.addEventListener('change',e=>{
+        curSubjectFilter=e.target.value;
+        const other=document.getElementById('filter-subject-select');
+        if(other)other.value=curSubjectFilter;
+        renderSessionsTable(getSess(),curFilter);
+        renderFullSessionsTable(getSess());
+      });
+    }
+
+    function renderSessionsTable(sess,filter){
+      const subs=getSubs();
+      let f=[...sess];const today=todayStr();
+
+      // Filter by subject
+      if(curSubjectFilter&&curSubjectFilter!=='all'){
+        f=f.filter(s=>s.subjectId===curSubjectFilter);
+      }
+
+      // Filter by status tab
+      if(filter==='today')f=f.filter(s=>s.date===today);
+      if(filter==='pending')f=f.filter(s=>s.status!=='done'&&s.status!=='completed');
+      if(filter==='done')f=f.filter(s=>s.status==='done'||s.status==='completed');
+
+      // Filter by topic / subject live search
+      if(searchKeyword){
+        f=f.filter(s=>{
+          const sub=subs.find(x=>x.id===s.subjectId);
+          const subName=sub?sub.name.toLowerCase():'';
+          return (s.topic&&s.topic.toLowerCase().includes(searchKeyword)) || subName.includes(searchKeyword);
+        });
+      }
+
+      const cntAll=document.getElementById('cnt-all');
+      if(cntAll) cntAll.textContent=sess.length;
+      const tb=document.getElementById('sessions-tbody');
+      if(!tb) return;
+      if(!f.length){tb.innerHTML=`<tr><td colspan="6"><div class="empty-pane"><div class="empty-icon">🔍</div><h3>No matching sessions found</h3><p>Try searching for a different keyword or topic name.</p></div></td></tr>`;return;}
+      
+      const dc={easy:'#10b981',medium:'#f59e0b',hard:'#ef4444'};
+
+      tb.innerHTML=f.map(s=>{
+        const sub=subs.find(x=>x.id===s.subjectId),color=sub?sub.color:'#4f46e5';
+        const status=s.status||'pending';
+        let cc='chip-pending',cl='Pending';
+        if(status==='done'||status==='completed'){cc='chip-done';cl='Completed ✓';}
+        else if(status==='needs_revision'){cc='chip-missed';cl='Needs Revision';}
+        else if(s.date===today&&status!=='done'&&status!=='completed'){cc='chip-today';cl='Today';}
+        else if(status==='missed'){cc='chip-missed';cl='Missed';}
+
+        let actionBtnHtml='';
+        if(status==='done'||status==='completed'){
+          actionBtnHtml=`<button type="button" class="btn-topic-status status-completed" onclick="AssessmentManager.openModal('${s.id}')" title="Topic Mastered - Click to review attempt or practise PYQs"><span>✓</span> <span>Completed</span> ${s.completedScore?`<span class="score-pill">${s.completedScore}/10</span>`:''}</button>`;
+        }else if(status==='needs_revision'){
+          actionBtnHtml=`<button type="button" class="btn-topic-status status-needs-revision" onclick="AssessmentManager.openModal('${s.id}')" title="Score ≤ 7/10 - Click to review concepts and retake assessment"><span>⚠️</span> <span>Needs Revision</span> <span class="score-pill">Retake ↺</span></button>`;
+        }else{
+          actionBtnHtml=`<button type="button" class="btn-topic-status status-take-test" onclick="AssessmentManager.openModal('${s.id}')" title="Take AI 10-Question Assessment to verify understanding and earn completion"><span>📝</span> <span>Take Assessment</span></button>`;
+        }
+
+        return`<tr><td class="td-assessment">${actionBtnHtml}</td><td class="td-muted">${fmtDate(s.date)}</td><td class="td-title">${escH(s.topic)}</td><td>${sub?`<span class="subject-tag" style="background:${color}14;color:${color};border:1px solid ${color}30;">${escH(sub.name)}</span>`:'<span class="td-muted">—</span>'}</td><td><span class="diff-dot" style="background:${dc[s.difficulty]||'#94a3b8'};"></span><span class="td-muted" style="text-transform:capitalize;">${s.difficulty||'medium'}</span></td><td><span class="status-chip ${cc}">${cl}</span></td></tr>`;
+      }).join('');
+    }
+
+    function renderFullSessionsTable(sess){
+      const subs=getSubs();
+      let f=[...sess];const today=todayStr();
+
+      // Filter by subject
+      if(curSubjectFilter&&curSubjectFilter!=='all'){
+        f=f.filter(s=>s.subjectId===curSubjectFilter);
+      }
+
+      // Filter by status tab
+      if(fullCurFilter==='today')f=f.filter(s=>s.date===today);
+      if(fullCurFilter==='pending')f=f.filter(s=>s.status!=='done'&&s.status!=='completed');
+      if(fullCurFilter==='done')f=f.filter(s=>s.status==='done'||s.status==='completed');
+
+      // Filter by topic / subject live search
+      if(searchKeyword){
+        f=f.filter(s=>{
+          const sub=subs.find(x=>x.id===s.subjectId);
+          const subName=sub?sub.name.toLowerCase():'';
+          return (s.topic&&s.topic.toLowerCase().includes(searchKeyword)) || subName.includes(searchKeyword);
+        });
+      }
+
+      const fstb=document.getElementById('full-sessions-tbody');
+      if(!fstb)return;
+      if(!f.length){fstb.innerHTML=`<tr><td colspan="7"><div class="empty-pane"><div class="empty-icon">🔍</div><h3>No sessions found</h3><p>Try searching for a different keyword.</p></div></td></tr>`;return;}
+      
+      const dc={easy:'#10b981',medium:'#f59e0b',hard:'#ef4444'};
+
+      fstb.innerHTML=f.map(s=>{
+        const sub=subs.find(x=>x.id===s.subjectId),color=sub?sub.color:'#4f46e5';
+        const status=s.status||'pending';
+        let cc='chip-pending',cl='Pending';
+        if(status==='done'||status==='completed'){cc='chip-done';cl='Completed ✓';}
+        else if(status==='needs_revision'){cc='chip-missed';cl='Needs Revision';}
+        else if(s.date===today&&status!=='done'&&status!=='completed'){cc='chip-today';cl='Today';}
+
+        let actionBtnHtml='';
+        if(status==='done'||status==='completed'){
+          actionBtnHtml=`<button type="button" class="btn-topic-status status-completed" onclick="AssessmentManager.openModal('${s.id}')" title="Topic Mastered - Click to review attempt or practise PYQs"><span>✓</span> <span>Completed</span> ${s.completedScore?`<span class="score-pill">${s.completedScore}/10</span>`:''}</button>`;
+        }else if(status==='needs_revision'){
+          actionBtnHtml=`<button type="button" class="btn-topic-status status-needs-revision" onclick="AssessmentManager.openModal('${s.id}')" title="Score ≤ 7/10 - Click to review concepts and retake assessment"><span>⚠️</span> <span>Needs Revision</span> <span class="score-pill">Retake ↺</span></button>`;
+        }else{
+          actionBtnHtml=`<button type="button" class="btn-topic-status status-take-test" onclick="AssessmentManager.openModal('${s.id}')" title="Take AI 10-Question Assessment to verify understanding and earn completion"><span>📝</span> <span>Take Assessment</span></button>`;
+        }
+
+        return`<tr><td class="td-assessment">${actionBtnHtml}</td><td class="td-muted">${fmtDate(s.date)}</td><td class="td-title">${escH(s.topic)}</td><td>${sub?`<span class="subject-tag" style="background:${color}14;color:${color};border:1px solid ${color}30;">${escH(sub.name)}</span>`:'—'}</td><td>${s.hours||2}h</td><td><span class="diff-dot" style="background:${dc[s.difficulty]||'#94a3b8'};"></span><span class="td-muted" style="text-transform:capitalize;">${s.difficulty||'medium'}</span></td><td><span class="status-chip ${cc}">${cl}</span></td></tr>`;
+      }).join('');
+    }
+
+    // FR-06: Manual completion toggle replaced by assessment launch
+    window.toggleSession=function(id,el){
+      if(window.AssessmentManager){
+        showToast('Topic completion requires passing the 10-question AI assessment (≥ 8/10). Launching quiz... 📝', 'ℹ️');
+        AssessmentManager.openModal(id);
+      }
+    };
+
+    window.saveAllChangesFeedback=function(){
+      const btn1=document.getElementById('btn-save-sessions');
+      const btn2=document.getElementById('btn-full-save-changes');
+      [btn1,btn2].forEach(b=>{
+        if(b){
+          b.classList.add('saved-pulse');
+          b.textContent='✓ Changes Saved';
+          setTimeout(()=>{b.classList.remove('saved-pulse');b.textContent='💾 Save Changes';},2200);
+        }
+      });
+      showToast('All session changes and completion status saved! 💾');
+    };
+
+    // ─── STUDY NOTES SYSTEM (LIGHT THEME) ─────────────────────
+    function initNotesSystem(){
+      const fullNotes=document.getElementById('full-notes-area');
+      const savedNotes=getNotes();
+
+      if(fullNotes){
+        fullNotes.value=savedNotes;
+        updateNotesCounter(savedNotes);
+
+        fullNotes.oninput=e=>{
+          saveNotes(e.target.value);
+          updateNotesCounter(e.target.value);
+          const st=document.getElementById('notes-tab-status');
+          if(st){
+            st.textContent='Saving...';
+            setTimeout(()=>{st.textContent='Auto-saved ✓';},300);
+          }
+        };
+      }
+    }
+
+    function updateNotesCounter(text){
+      const words=text.trim()?text.trim().split(/\s+/).length:0;
+      const chars=text.length;
+      const cEl=document.getElementById('notes-counter-badge');
+      if(cEl) cEl.textContent=`${words} word${words===1?'':'s'} • ${chars} character${chars===1?'':'s'}`;
+    }
+
+    window.copyAllNotes=function(){
+      const fn=document.getElementById('full-notes-area');
+      const t=fn?fn.value:getNotes();
+      navigator.clipboard.writeText(t).then(()=>{
+        showToast('Study notes copied to clipboard! 📋');
+      }).catch(()=>{
+        showToast('Notes copied! 📋');
+      });
+    };
+
+    window.clearNotes=function(){
+      if(!confirm('Are you sure you want to clear all notes?'))return;
+      saveNotes('');
+      const fn=document.getElementById('full-notes-area');
+      if(fn) fn.value='';
+      updateNotesCounter('');
+      showToast('Notes cleared 🗑️');
+    };
+
+    window.manualSaveNotes=function(){
+      const fn=document.getElementById('full-notes-area');
+      const val=fn?fn.value:'';
+      saveNotes(val);
+      showToast('Notes saved successfully! 💾');
+    };
+
+    // ─── EDIT SUBJECT SYSTEM (Photo 3 Feature) ────────────────
+    window.openEditSubjectModal=function(id){
+      const subs=getSubs();
+      const s=subs.find(x=>x.id===id);
+      if(!s)return;
+      document.getElementById('edit-sub-id').value=s.id;
+      document.getElementById('edit-sub-name').value=s.name||'';
+      document.getElementById('edit-sub-code').value=s.courseCode||s.instructor||'';
+      document.getElementById('edit-sub-exam-date').value=s.examDate||'';
+      document.getElementById('edit-sub-color').value=s.color||'#4f46e5';
+      document.getElementById('edit-sub-modal-error').style.display='none';
+      openModal('edit-subject-modal-backdrop');
+      setTimeout(()=>document.getElementById('edit-sub-name').focus(),100);
+    };
+
+    window.closeEditSubjectModal=function(){
+      closeModal('edit-subject-modal-backdrop');
+      document.getElementById('edit-sub-modal-error').style.display='none';
+    };
+
+    window.saveEditedSubject=function(){
+      const id=document.getElementById('edit-sub-id').value;
+      const name=document.getElementById('edit-sub-name').value.trim();
+      const code=document.getElementById('edit-sub-code').value.trim();
+      const examDate=document.getElementById('edit-sub-exam-date').value;
+      const color=document.getElementById('edit-sub-color').value;
+      const err=document.getElementById('edit-sub-modal-error');
+
+      if(!name){
+        err.textContent='Subject name cannot be empty.';
+        err.style.display='block';
+        return;
+      }
+
+      let subs=getSubs();
+      const s=subs.find(x=>x.id===id);
+      if(s){
+        s.name=name;
+        s.courseCode=code;
+        s.instructor=code;
+        s.examDate=examDate;
+        s.color=color;
+      }
+      saveSubs(subs);
+      addAct(`Updated subject details: <strong>${name}</strong>`);
+      showToast(`Subject updated to "${name}" across all pages! ✏️`);
+      closeEditSubjectModal();
+      renderAll();
+    };
+
+    window.deleteSubject=function(id){
+      if(!confirm('Are you sure you want to remove this subject and all its planned sessions?'))return;
+      let subs=getSubs(),sess=getSess();
+      const s=subs.find(x=>x.id===id);
+      subs=subs.filter(x=>x.id!==id);
+      sess=sess.filter(x=>x.subjectId!==id);
+      saveSubs(subs);saveSess(sess);
+      addAct(`Removed subject: <strong>${s?s.name:'Subject'}</strong>`);
+      showToast('Subject removed.');
+      if(curSubjectFilter===id)curSubjectFilter='all';
+      renderAll();
+    };
+
+    function populateSubjectSelect(subs){
+      const sel=document.getElementById('ses-subject'),cur=sel?sel.value:'';
+      if(sel){
+        sel.innerHTML='<option value="">Select subject...</option>'+subs.map(s=>`<option value="${s.id}" ${s.id===cur?'selected':''}>${escH(s.name)}</option>`).join('');
+      }
+
+      // Populate filter dropdowns
+      const filterOpts='<option value="all">All Subjects</option>'+subs.map(s=>`<option value="${s.id}" ${s.id===curSubjectFilter?'selected':''}>${escH(s.name)}</option>`).join('');
+      const f1=document.getElementById('filter-subject-select');
+      if(f1){f1.innerHTML=filterOpts;f1.value=curSubjectFilter;}
+      const f2=document.getElementById('full-filter-subject-select');
+      if(f2){f2.innerHTML=filterOpts;f2.value=curSubjectFilter;}
+    }
+
+    // ─── MODAL CONTROLLERS ────────────────────────────────────
+    function openModal(id){const bd=document.getElementById(id);bd.classList.add('open');setTimeout(()=>{bd.querySelector('.modal-box').classList.add('open');},10);}
+    function closeModal(id){const bd=document.getElementById(id);bd.querySelector('.modal-box').classList.remove('open');setTimeout(()=>bd.classList.remove('open'),280);}
+
+    window.closeSubjectModal=()=>{closeModal('subject-modal-backdrop');document.getElementById('sub-name').value='';document.getElementById('sub-exam-date').value='';document.getElementById('sub-modal-error').textContent='';document.getElementById('sub-modal-error').style.display='none';};
+    window.closeSessionModal=()=>{closeModal('session-modal-backdrop');document.getElementById('ses-topic').value='';document.getElementById('ses-date').value='';document.getElementById('ses-hours').value='2';document.getElementById('ses-modal-error').textContent='';document.getElementById('ses-modal-error').style.display='none';};
+    window.closeUploadModal=()=>{closeModal('upload-modal-backdrop');clearUploadForm();};
+    window.closeAiPreviewModal=()=>{closeModal('ai-preview-modal');};
+
+    function openSubjectModal(){openModal('subject-modal-backdrop');setTimeout(()=>document.getElementById('sub-name').focus(),100);}
+    function openSessionModal(){
+      const subs=getSubs();if(!subs.length){alert('Add a subject first or upload a syllabus!');openUploadModal();return;}
+      populateSubjectSelect(subs);openModal('session-modal-backdrop');setTimeout(()=>document.getElementById('ses-topic').focus(),100);
+    }
+    function openUploadModal(){
+      clearUploadForm();
+      document.getElementById('upload-input-view').style.display='block';
+      document.getElementById('upload-loading-view').style.display='none';
+      openModal('upload-modal-backdrop');
+    }
+
+    window.saveSubject=function(){
+      const name=document.getElementById('sub-name').value.trim(),examDate=document.getElementById('sub-exam-date').value,color=document.getElementById('sub-color').value;
+      const err=document.getElementById('sub-modal-error');
+      if(!name){err.textContent='Subject name is required.';err.style.display='block';return;}
+      const subs=getSubs();subs.push({id:'sub_'+Date.now(),name,examDate,color});saveSubs(subs);
+      addAct(`Added subject: <strong>${name}</strong>`);showToast(`Added ${name}!`);closeSubjectModal();renderAll();
+    };
+
+    window.saveSession=function(){
+      const topic=document.getElementById('ses-topic').value.trim(),subjId=document.getElementById('ses-subject').value,date=document.getElementById('ses-date').value,diff=document.getElementById('ses-difficulty').value,hours=document.getElementById('ses-hours').value;
+      const err=document.getElementById('ses-modal-error');
+      if(!topic){err.textContent='Topic name is required.';err.style.display='block';return;}
+      if(!subjId){err.textContent='Please select a subject.';err.style.display='block';return;}
+      const sess=getSess();
+      sess.push({id:'ses_'+Date.now(),topic,subjectId:subjId,date:date||todayStr(),difficulty:diff,hours:parseFloat(hours)||2,status:'pending'});
+      saveSess(sess);addAct(`New session: <strong>${topic}</strong>`);showToast('Session scheduled!');closeSessionModal();renderAll();
+    };
+
+    // ─── SYLLABUS UPLOAD & DROPZONE ───────────────────────────
+    let selectedFile=null;
+    let activeUploadPane='file';
+
+    const dropzone=document.getElementById('syllabus-dropzone');
+    const fileInput=document.getElementById('syllabus-file-input');
+
+    if(dropzone&&fileInput){
+      dropzone.addEventListener('click',()=>fileInput.click());
+      fileInput.addEventListener('change',e=>{if(e.target.files.length)handleFileSelect(e.target.files[0]);});
+
+      dropzone.addEventListener('dragover',e=>{e.preventDefault();dropzone.classList.add('dragover');});
+      dropzone.addEventListener('dragleave',()=>dropzone.classList.remove('dragover'));
+      dropzone.addEventListener('drop',e=>{
+        e.preventDefault();dropzone.classList.remove('dragover');
+        if(e.dataTransfer.files.length)handleFileSelect(e.dataTransfer.files[0]);
+      });
+    }
+
+    function handleFileSelect(file){
+      if(!file.name.match(/\.(pdf|txt)$/i)){alert('Please upload a PDF or TXT file.');return;}
+      if(file.size>10*1024*1024){alert('File size exceeds 10MB limit.');return;}
+      selectedFile=file;
+      document.getElementById('selected-file-name').textContent=file.name+' ('+Math.round(file.size/1024)+' KB)';
+      document.getElementById('selected-file-wrap').style.display='block';
+      dropzone.style.display='none';
+    }
+
+    const btnClearFile=document.getElementById('btn-clear-file');
+    if(btnClearFile){
+      btnClearFile.addEventListener('click',e=>{
+        e.stopPropagation();
+        selectedFile=null;fileInput.value='';
+        document.getElementById('selected-file-wrap').style.display='none';
+        dropzone.style.display='block';
+      });
+    }
+
+    // Upload pane tabs (File vs Paste)
+    document.querySelectorAll('.u-tab-btn').forEach(btn=>{
+      btn.addEventListener('click',()=>{
+        document.querySelectorAll('.u-tab-btn').forEach(b=>b.classList.remove('active'));
+        btn.classList.add('active');
+        activeUploadPane=btn.dataset.upane;
+        document.querySelectorAll('.u-pane').forEach(p=>p.classList.remove('active'));
+        document.getElementById('pane-'+activeUploadPane).classList.add('active');
+      });
+    });
+
+    function clearUploadForm(){
+      selectedFile=null;
+      if(fileInput) fileInput.value='';
+      if(document.getElementById('selected-file-wrap')) document.getElementById('selected-file-wrap').style.display='none';
+      if(dropzone) dropzone.style.display='block';
+      document.getElementById('paste-syllabus-text').value='';
+      document.getElementById('paste-subject-title').value='';
+      document.getElementById('upload-exam-date').value='';
+      document.getElementById('upload-error').style.display='none';
+      document.getElementById('upload-error').textContent='';
+    }
+
+    // Sample syllabus loader
+    const btnLoadSample=document.getElementById('btn-load-sample');
+    if(btnLoadSample){
+      btnLoadSample.addEventListener('click',()=>{
+        document.getElementById('u-tab-text').click();
+        document.getElementById('paste-subject-title').value='Data Structures & Algorithms';
+        document.getElementById('paste-syllabus-text').value=`COURSE SYLLABUS: Data Structures & Algorithms (CS 201)
+Instructor: Dr. Emily Hayes
+Final Exam Date: ${new Date(Date.now()+28*86400000).toISOString().split('T')[0]}
+
+Unit 1: Arrays, Linked Lists & Complexity Analysis
+- Big-O Notation and Time-Space Complexity (2.5 hours, Easy)
+- Dynamic Arrays & Amortized Analysis (2.0 hours, Easy)
+- Singly and Doubly Linked Lists Implementation (3.0 hours, Medium)
+
+Unit 2: Stacks, Queues & Recursion
+- Stack Applications and Expression Parsing (2.0 hours, Medium)
+- Queue Variants: Circular Queues and Deques (2.5 hours, Medium)
+- Recursion and Divide & Conquer Strategies (3.0 hours, Hard)
+
+Unit 3: Trees, Heaps & Graphs
+- Binary Search Trees: Insertion, Deletion, Balancing (3.5 hours, Hard)
+- Binary Heaps & Priority Queues (2.5 hours, Medium)
+- Graph Representations, BFS & DFS Traversals (3.5 hours, Hard)
+- Shortest Path Algorithms: Dijkstra & Bellman-Ford (3.0 hours, Hard)
+
+Midterm Exam: Week 4 (30% weight)
+Final Comprehensive Exam: Week 8 (50% weight)`;
+        showToast('Sample syllabus loaded! Click Analyze below.');
+      });
+    }
+
+    // ─── ANALYZE SYLLABUS SUBMISSION ──────────────────────────
+    let currentAiResult=null;
+    let selectedColorTag='#4f46e5';
+
+    const btnSubmitUpload=document.getElementById('btn-submit-upload');
+    if(btnSubmitUpload){
+      btnSubmitUpload.addEventListener('click',async()=>{
+        const err=document.getElementById('upload-error');
+        err.style.display='none';
+
+        const examDateOverride=document.getElementById('upload-exam-date').value;
+        selectedColorTag=document.getElementById('upload-color-tag').value;
+
+        let formData=null;
+        let jsonBody=null;
+
+        if(activeUploadPane==='file'){
+          if(!selectedFile){err.textContent='Please select a PDF, image (PNG/JPG), or TXT syllabus file.';err.style.display='block';return;}
+          formData=new FormData();
+          formData.append('syllabus',selectedFile);
+        }else{
+          const text=document.getElementById('paste-syllabus-text').value.trim();
+          const title=document.getElementById('paste-subject-title').value.trim();
+          if(!text||text.length<15){err.textContent='Please paste at least 15 characters of syllabus content.';err.style.display='block';return;}
+          jsonBody={syllabusText:text,title:title||'Course Syllabus'};
+        }
+
+        // Switch to AI loading view
+        document.getElementById('upload-input-view').style.display='none';
+        document.getElementById('upload-loading-view').style.display='block';
+
+        const msgs=[
+          "Reading your syllabus",
+          "Splitting it into units",
+          "Estimating topic weightage",
+          "Building your study plan"
+        ];
+        let msgIdx=0;
+        const msgEl=document.getElementById('ai-loading-msg');
+        if(msgEl) msgEl.textContent=msgs[0];
+        const interval=setInterval(()=>{
+          msgIdx=(msgIdx+1)%msgs.length;
+          if(msgEl){
+            msgEl.style.animation='none';
+            void msgEl.offsetWidth;
+            msgEl.style.animation='';
+            msgEl.textContent=msgs[msgIdx];
+          }
+        },1900);
+
+        try{
+          let res;
+          if(formData){
+            res=await fetch('/api/syllabus/analyze',{method:'POST',body:formData});
+          }else{
+            res=await fetch('/api/syllabus/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(jsonBody)});
+          }
+
+          clearInterval(interval);
+          const data=await res.json();
+
+          if(!res.ok||!data.success){
+            throw new Error(data.message||'Failed to analyze syllabus.');
+          }
+
+          currentAiResult=data.data;
+          if(examDateOverride)currentAiResult.examDate=examDateOverride;
+
+          closeUploadModal();
+          openAiPreview(currentAiResult);
+
+        }catch(e){
+          clearInterval(interval);
+          document.getElementById('upload-input-view').style.display='block';
+          document.getElementById('upload-loading-view').style.display='none';
+          err.textContent=e.message||'Error connecting to syllabus AI server.';
+          err.style.display='block';
+        }
+      });
+    }
+
+    // ─── AI PREVIEW & IMPORT ──────────────────────────────────
+    function openAiPreview(data){
+      // Normalize subject name
+      let subName=data.subjectName||'';
+      if(!subName&&data.subjects&&data.subjects.length)subName=data.subjects[0].name||'Course Syllabus';
+      if(!subName)subName='Extracted Course';
+
+      document.getElementById('prev-subject-name').textContent=subName;
+      document.getElementById('prev-input-subname').value=subName;
+      document.getElementById('prev-summary').textContent=data.summary||(data.instructor?'Instructor: '+data.instructor:'Syllabus parsed into structured study sessions.');
+
+      // Default exam date
+      let examDate=data.examDate||'';
+      if(!examDate&&data.exams&&data.exams.length)examDate=data.exams[0].date||'';
+      if(!examDate){
+        const d=new Date();d.setDate(d.getDate()+30);
+        examDate=d.toISOString().split('T')[0];
+      }
+      document.getElementById('prev-input-examdate').value=examDate;
+      document.getElementById('prev-exam-badge').textContent='Exam: '+fmtDate(examDate);
+
+      // Collect all topics/sessions
+      let sessionsList=[];
+      if(data.sessions&&data.sessions.length){
+        sessionsList=data.sessions;
+      }else if(data.units&&data.units.length){
+        data.units.forEach((u,ui)=>{
+          const unitTitle=u.title||`Unit ${u.unitNumber||ui+1}`;
+          (u.topics||[]).forEach(t=>{
+            if(typeof t==='string')sessionsList.push({topic:`${unitTitle}: ${t}`,hours:2,difficulty:'medium'});
+            else sessionsList.push({topic:`${unitTitle}: ${t.title||'Topic'}`,hours:t.hours||2,difficulty:t.difficulty||'medium'});
+          });
+        });
+      }else if(data.subjects&&data.subjects[0]&&data.subjects[0].units){
+        data.subjects[0].units.forEach((u,ui)=>{
+          const unitTitle=u.title||`Unit ${u.unitNumber||ui+1}`;
+          (u.topics||[]).forEach(t=>{
+            if(typeof t==='string')sessionsList.push({topic:`${unitTitle}: ${t}`,hours:2,difficulty:'medium'});
+            else sessionsList.push({topic:`${unitTitle}: ${t.title||'Topic'}`,hours:t.hours||2,difficulty:t.difficulty||'medium'});
+          });
+        });
+      }
+
+      if(!sessionsList.length){
+        sessionsList=[{topic:'Introduction & Fundamentals',hours:2,difficulty:'easy'},{topic:'Core Concept Deep Dive',hours:2.5,difficulty:'medium'},{topic:'Advanced Problem Solving & Review',hours:3,difficulty:'hard'}];
+      }
+
+      document.getElementById('prev-topics-count').textContent=sessionsList.length+' Topics';
+      document.getElementById('prev-units-count').textContent=(data.units?data.units.length:1)+' Units';
+
+      const daysUntil=Math.max(1,daysFrom(examDate)||28);
+      const dc={easy:'#10b981',medium:'#f59e0b',hard:'#ef4444'};
+
+      const renderedSessions=sessionsList.map((s,i)=>{
+        const dayOffset=Math.floor((i/(sessionsList.length||1))*(daysUntil-2))+1;
+        const targetDate=new Date();targetDate.setDate(targetDate.getDate()+dayOffset);
+        const schedStr=targetDate.toISOString().split('T')[0];
+
+        return`<tr>
+          <td class="preview-topic-cell">${escH(s.topic||s.title)}</td>
+          <td class="preview-hours-cell">${s.hours||2}h</td>
+          <td><span class="diff-dot" style="background:${dc[s.difficulty]||'#94a3b8'};"></span><span class="preview-diff-cell">${s.difficulty||'medium'}</span></td>
+          <td class="preview-date-cell">${fmtDate(schedStr)}</td>
+        </tr>`;
+      });
+
+      document.getElementById('prev-sessions-tbody').innerHTML=renderedSessions.join('');
+      currentAiResult._normalizedSessions=sessionsList;
+
+      openModal('ai-preview-modal');
+    }
+
+    // ─── IMPORT INTO TRACKER ──────────────────────────────────
+    const btnConfirmImport=document.getElementById('btn-confirm-import');
+    if(btnConfirmImport){
+      btnConfirmImport.addEventListener('click',()=>{
+        if(!currentAiResult)return;
+
+        const subName=document.getElementById('prev-input-subname').value.trim()||currentAiResult.subjectName||'New Subject';
+        const examDate=document.getElementById('prev-input-examdate').value;
+        const color=selectedColorTag||'#4f46e5';
+
+        const subs=getSubs();
+        const newSubId='sub_'+Date.now();
+        const newSubject={
+          id:newSubId,
+          name:subName,
+          examDate:examDate,
+          color:color,
+          instructor:currentAiResult.instructor||null,
+          courseCode:currentAiResult.courseCode||null,
+          summary:currentAiResult.summary||null,
+          units:currentAiResult.units||[]
+        };
+        subs.push(newSubject);
+        saveSubs(subs);
+
+        const sess=getSess();
+        const sessionsList=currentAiResult._normalizedSessions||[];
+        const daysUntil=Math.max(1,daysFrom(examDate)||28);
+
+        sessionsList.forEach((s,i)=>{
+          const dayOffset=Math.floor((i/(sessionsList.length||1))*(daysUntil-2))+1;
+          const targetDate=new Date();targetDate.setDate(targetDate.getDate()+dayOffset);
+          const schedStr=targetDate.toISOString().split('T')[0];
+
+          sess.push({
+            id:'ses_'+(Date.now()+i),
+            subjectId:newSubId,
+            topic:s.topic||s.title||`Topic ${i+1}`,
+            hours:parseFloat(s.hours)||2,
+            difficulty:s.difficulty||'medium',
+            date:schedStr,
+            status:'pending'
+          });
+        });
+
+        saveSess(sess);
+        addAct(`AI imported syllabus: <strong>${subName}</strong> with ${sessionsList.length} scheduled sessions ✨`);
+        closeAiPreviewModal();
+        showToast(`Semester tracker updated with ${subName}! 🚀`);
+
+        document.querySelector('.sidebar-nav .nav-item[data-tab="home"]').click();
+        renderAll();
+      });
+    }
+
+    // ─── BUTTON LISTENERS ─────────────────────────────────────
+    document.getElementById('btn-top-upload-syllabus').addEventListener('click',openUploadModal);
+    document.getElementById('btn-add-subject').addEventListener('click',openSubjectModal);
+    document.getElementById('btn-add-session').addEventListener('click',openSessionModal);
+    document.getElementById('btn-start-ai').addEventListener('click',openUploadModal);
+    document.getElementById('btn-start-manual').addEventListener('click',openSubjectModal);
+
+    // Notification Settings Modal Handlers
+    window.openNotificationSettingsModal = async function() {
+      const checkbox = document.getElementById('setting-achievement-emails');
+      const slider = document.getElementById('slider-achievement-emails');
+      
+      let isEnabled = true;
+      if (window.currentUser && window.currentUser.settings && typeof window.currentUser.settings.achievementEmails !== 'undefined') {
+        isEnabled = !!window.currentUser.settings.achievementEmails;
+      }
+      
+      if (checkbox) checkbox.checked = isEnabled;
+      if (slider) slider.style.backgroundColor = isEnabled ? '#6366f1' : '#475569';
+      
+      try {
+        const token = localStorage.getItem('studyflow_auth_token');
+        if (token) {
+          const res = await fetch('/api/notifications', {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const noteEl = document.getElementById('settings-email-note');
+            if (noteEl && data.summary) {
+              noteEl.innerHTML = `Achievement emails sent: <strong>${data.summary.sent || 0}</strong> • Pending/Retrying: <strong>${(data.summary.failed || 0) + (data.summary.pending || 0)}</strong><br>Emails are sent to your verified student account address.`;
+            }
+          }
+        }
+      } catch (e) {
+        console.debug('Notification fetch error:', e);
+      }
+      
+      openModal('notification-settings-modal');
+    };
+
+    window.closeNotificationSettingsModal = function() {
+      closeModal('notification-settings-modal');
+    };
+
+    window.toggleAchievementEmailCheckbox = function(checked) {
+      const slider = document.getElementById('slider-achievement-emails');
+      if (slider) {
+        slider.style.backgroundColor = checked ? '#6366f1' : '#475569';
+      }
+    };
+
+    window.saveNotificationPreferencesFromModal = async function() {
+      const checkbox = document.getElementById('setting-achievement-emails');
+      const enabled = checkbox ? checkbox.checked : true;
+      
+      try {
+        const token = localStorage.getItem('studyflow_auth_token');
+        if (token) {
+          const res = await fetch('/api/settings/notifications', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ achievementEmails: enabled })
+          });
+          
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            showToast(err.message || 'Failed to update preferences', '⚠️');
+            return;
+          }
+          
+          if (window.currentUser) {
+            if (!window.currentUser.settings) window.currentUser.settings = {};
+            window.currentUser.settings.achievementEmails = enabled;
+            localStorage.setItem('studyflow_auth_user', JSON.stringify(window.currentUser));
+          }
+          showToast(enabled ? 'Achievement emails enabled! 🔔' : 'Achievement emails disabled. 🔕');
+          closeNotificationSettingsModal();
+        } else {
+          showToast('Please sign in to save preferences', '⚠️');
+        }
+      } catch (err) {
+        showToast('Network error saving preferences', '⚠️');
+      }
+    };
+
+    // Modal background close
+    document.querySelectorAll('.modal-backdrop').forEach(bd=>bd.addEventListener('click',e=>{
+      if(e.target===bd){
+        closeSubjectModal();closeSessionModal();closeUploadModal();closeAiPreviewModal();closeEditSubjectModal();
+        closeNotificationSettingsModal();
+        if(window.AssessmentManager) AssessmentManager.closeModal();
+        if(window.PYQManager){
+          PYQManager.closeUploadModal();
+          PYQManager.closeReclassifyModal();
+          PYQManager.closeStudyPlanModal();
+        }
+      }
+    }));
+    document.addEventListener('keydown',e=>{
+      if(e.key==='Escape'){
+        closeSubjectModal();closeSessionModal();closeUploadModal();closeAiPreviewModal();closeEditSubjectModal();
+        closeNotificationSettingsModal();
+        if(window.AssessmentManager) AssessmentManager.closeModal();
+        if(window.PYQManager){
+          PYQManager.closeUploadModal();
+          PYQManager.closeReclassifyModal();
+          PYQManager.closeStudyPlanModal();
+        }
+      }
+    });
+
+    // Initial render & authentication check
+    async function initDashboard() {
+      const user = await AuthManager.requireAuth();
+      if (!user) return; // redirected to index.html?auth=login
+      window.currentUser = user;
+
+      // Clear legacy global keys to prevent any cross-account leakage
+      localStorage.removeItem('sf_subjects');
+      localStorage.removeItem('sf_sessions');
+      localStorage.removeItem('sf_activity');
+      localStorage.removeItem('sf_study_notes');
+
+      // Update student profile in sidebar & greeting
+      const firstName = (user.name || 'Student').split(' ')[0];
+      const greetingEl = document.getElementById('user-greeting');
+      if (greetingEl) greetingEl.textContent = firstName;
+
+      const avatarEl = document.getElementById('user-avatar-initials');
+      if (avatarEl) avatarEl.textContent = (user.name || 'S').charAt(0).toUpperCase();
+
+      const userNameEl = document.querySelector('.sidebar-user .user-name');
+      if (userNameEl) userNameEl.textContent = user.name;
+
+      const userRoleEl = document.querySelector('.sidebar-user .user-role');
+      if (userRoleEl) userRoleEl.textContent = user.email || 'Student Account';
+
+      // Load user study data from server (dedicated to this user)
+      try {
+        const cloudData = await AuthManager.fetchUserData();
+        if (cloudData) {
+          localStorage.setItem(getUserKey('subjects'), JSON.stringify(cloudData.subjects || []));
+          localStorage.setItem(getUserKey('sessions'), JSON.stringify(cloudData.sessions || []));
+          localStorage.setItem(getUserKey('activity'), JSON.stringify(cloudData.activity || []));
+          const notesText = (cloudData.notes && cloudData.notes.content) ? cloudData.notes.content : (typeof cloudData.notes === 'string' ? cloudData.notes : '');
+          localStorage.setItem(getUserKey('notes'), notesText);
+        }
+      } catch (e) {
+        console.warn('Could not sync initial cloud data:', e);
+      }
+
+      initNotesSystem();
+      if(window.PYQManager) {
+        PYQManager.init();
+      }
+      renderAll();
+    }
+
+    initDashboard();
+  </script>
+</body>
+</html>

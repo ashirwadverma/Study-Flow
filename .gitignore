@@ -1,0 +1,23 @@
+# Dependencies
+node_modules/
+package-lock.json.bak
+
+# Environment variables & secrets
+.env
+.env.*
+!.env.example
+
+# Runtime & dynamic data
+uploads/
+server/data/*.json
+!server/data/.gitkeep
+
+# System & temporary files
+desktop.ini
+~$*
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

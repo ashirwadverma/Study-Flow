@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyFlow | Plan Smarter. Study Better.</title>
+  <meta name="description" content="Turn your syllabus into a personalized, achievable daily schedule. Our smart algorithm factors in topic difficulty, exam dates, and study capacity.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/style.css?v=light4">
+  <style>
+    /* ── Light Theme Tokens & Landing Overrides ──────────────── */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    html, body { height: 100%; margin: 0; }
+
+    :root {
+      --bg: #F5F6FA;
+      --bg-subtle: #F8FAFC;
+      --surface: #FFFFFF;
+      --surface2: #F1F5F9;
+      --border: #E2E8F0;
+      --border2: #CBD5E1;
+      --border-accent: #C7D2FE;
+      --text: #141A2E;
+      --text-secondary: #475569;
+      --muted: #64748B;
+      --muted2: #94A3B8;
+      --accent: #4338CA;
+      --accent-hover: #3730A3;
+      --accent-light: #EEF2FF;
+      --accent2: #4F46E5;
+      --success: #10B981;
+      --success-bg: #ECFDF5;
+      --success-border: #A7F3D0;
+      --success-text: #065F46;
+      --warning: #F59E0B;
+      --warning-bg: #FFFBEB;
+      --warning-border: #FDE68A;
+      --warning-text: #92400E;
+      --danger: #EF4444;
+      --danger-bg: #FEF2F2;
+      --danger-border: #FECACA;
+      --danger-text: #991B1B;
+      --radius-sm: 8px;
+      --radius: 12px;
+      --radius-lg: 16px;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.07), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 12px 24px -4px rgba(0, 0, 0, 0.08), 0 4px 8px -2px rgba(0, 0, 0, 0.04);
+    }
+
+    body.landing-page {
+      background-color: var(--bg);
+      background-image: 
+        linear-gradient(to right, rgba(0, 0, 0, 0.035) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, 0.035) 1px, transparent 1px);
+      background-size: 36px 36px;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    :focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    /* ── Navbar ─────────────────────────────────────────────── */
+    .lp-nav {
+      position: sticky;
+      top: 0;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.1rem 2.5rem;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .lp-brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+    }
+
+    .lp-brand-icon {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+      box-shadow: 0 2px 8px rgba(67, 56, 202, 0.28);
+    }
+
+    .lp-brand-name {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -0.03em;
+    }
+
+    .lp-brand-name span { color: var(--accent); }
+
+    .lp-nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1.2rem;
+    }
+
+    .lp-nav-link {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.9rem;
+      font-weight: 600;
+      transition: color 0.2s;
+    }
+    .lp-nav-link:hover { color: var(--accent); }
+
+    .btn-login {
+      padding: 0.55rem 1.4rem;
+      border-radius: 999px;
+      border: 1.5px solid var(--border2);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.22s;
+    }
+    .btn-login:hover {
+      background: var(--accent-light);
+      border-color: var(--border-accent);
+      color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .btn-cta {
+      padding: 0.58rem 1.4rem;
+      border-radius: 999px;
+      border: none;
+      background: var(--accent);
+      color: #FFFFFF;
+      font-size: 0.88rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.22s;
+      text-decoration: none;
+      box-shadow: 0 2px 8px rgba(67, 56, 202, 0.25);
+    }
+    .btn-cta:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 14px rgba(67, 56, 202, 0.35); }
+
+    /* ── Hero Section ────────────────────────────────────────── */
+    .landing-page .hero,
+    .hero {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 6.5rem 1.5rem 5rem;
+      position: relative;
+      background: transparent !important;
+      background-image: none !important;
+      color: var(--text) !important;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.42rem 1.25rem;
+      border-radius: 999px;
+      background: var(--accent-light);
+      border: 1.5px solid var(--border-accent);
+      color: var(--accent);
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 2.2rem;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .hero-badge::before { content: '✦'; color: var(--accent); font-size: 0.9rem; }
+
+    /* Typewriter Title */
+    .hero-title-wrap {
+      min-height: 140px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.6rem;
+    }
+
+    .hero-type-line {
+      font-family: 'Anton', 'Impact', sans-serif;
+      font-size: clamp(3.2rem, 9vw, 6.4rem);
+      text-transform: uppercase;
+      line-height: 1.02;
+      letter-spacing: 0.025em;
+      margin: 0;
+      display: inline-block;
+      white-space: nowrap;
+      min-height: 1.05em;
+    }
+
+    .hero-type-line-1 {
+      color: var(--text);
+    }
+
+    .hero-type-line-2 {
+      color: var(--accent);
+    }
+
+    .typing-cursor {
+      display: inline-block;
+      width: 4px;
+      height: 0.85em;
+      background-color: var(--accent);
+      margin-left: 6px;
+      vertical-align: middle;
+      animation: blinkCursor 0.75s infinite steps(2, start);
+    }
+
+    @keyframes blinkCursor {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    .hero p {
+      font-size: 1.12rem;
+      color: var(--text-secondary);
+      max-width: 640px;
+      margin: 0 auto 3rem;
+      line-height: 1.7;
+      font-weight: 400;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 1.1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .hero-cta-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.95rem 2.4rem;
+      border-radius: 999px;
+      border: none;
+      background: var(--accent);
+      color: #ffffff;
+      font-size: 1.05rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.22s;
+      box-shadow: 0 4px 14px rgba(67, 56, 202, 0.28);
+    }
+    .hero-cta-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(67, 56, 202, 0.4);
+      background: var(--accent-hover);
+    }
+
+    .hero-cta-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.95rem 2.2rem;
+      border-radius: 999px;
+      border: 1.5px solid var(--border2);
+      background: var(--surface);
+      color: var(--text);
+      font-size: 1.02rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.22s;
+      box-shadow: var(--shadow-sm);
+    }
+    .hero-cta-secondary:hover {
+      border-color: var(--accent);
+      background: var(--accent-light);
+      color: var(--accent);
+      transform: translateY(-2px);
+    }
+
+    /* ── FLOWCHART PROCESS ───────────────────────────────────── */
+    .flowchart-section {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 5rem 1.5rem 8rem;
+      position: relative;
+    }
+
+    .section-label {
+      text-align: center;
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.85rem;
+    }
+
+    .section-title.flow-heading {
+      text-align: center;
+      font-family: 'Anton', 'Space Grotesk', sans-serif;
+      font-size: clamp(2.2rem, 5vw, 3.4rem);
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: var(--text);
+      margin: 0 0 0.8rem;
+    }
+
+    .section-sub {
+      text-align: center;
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 540px;
+      margin: 0 auto 4rem;
+      line-height: 1.6;
+    }
+
+    /* Vertical Flowchart Pipeline */
+    .flowchart-wrap {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 2.25rem;
+      margin: 0 auto;
+      max-width: 780px;
+    }
+
+    .flow-line-track {
+      position: absolute;
+      left: 35px;
+      top: 25px;
+      bottom: 25px;
+      width: 4px;
+      background: var(--border);
+      border-radius: 99px;
+      z-index: 1;
+    }
+
+    .flow-line-progress {
+      position: absolute;
+      left: 35px;
+      top: 25px;
+      width: 4px;
+      height: 0%;
+      background: var(--accent);
+      border-radius: 99px;
+      z-index: 2;
+      box-shadow: 0 0 10px rgba(67, 56, 202, 0.4);
+      transition: height 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Step Card */
+    .flow-step {
+      display: flex;
+      align-items: flex-start;
+      gap: 1.75rem;
+      position: relative;
+      z-index: 3;
+      opacity: 0.35;
+      transform: translateY(20px);
+      transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .flow-step.in-view {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* Node Icon */
+    .flow-node {
+      width: 70px;
+      height: 70px;
+      min-width: 70px;
+      border-radius: 16px;
+      background: var(--surface);
+      border: 2px solid var(--border2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Anton', 'Space Grotesk', sans-serif;
+      font-size: 1.8rem;
+      color: var(--muted);
+      box-shadow: var(--shadow-sm);
+      transition: all 0.4s ease;
+      position: relative;
+    }
+
+    .flow-step.in-view .flow-node {
+      border-color: var(--accent);
+      color: #ffffff;
+      background: var(--accent);
+      box-shadow: 0 4px 14px rgba(67, 56, 202, 0.35);
+      transform: scale(1.05);
+    }
+
+    .flow-node-pulse {
+      position: absolute;
+      inset: -6px;
+      border-radius: 20px;
+      border: 2px solid var(--accent);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .flow-step.in-view .flow-node-pulse {
+      animation: nodePulse 2.4s infinite cubic-bezier(0.4, 0, 0.6, 1);
+    }
+
+    @keyframes nodePulse {
+      0% { transform: scale(1); opacity: 0.6; }
+      100% { transform: scale(1.35); opacity: 0; }
+    }
+
+    /* Content Box */
+    .flow-card {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 1.6rem 2rem;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.3s ease;
+    }
+
+    .flow-step.in-view .flow-card {
+      border-color: var(--border-accent);
+      box-shadow: var(--shadow-md);
+    }
+
+    .flow-step.in-view .flow-card:hover {
+      border-color: var(--accent);
+      transform: translateX(3px);
+    }
+
+    .flow-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.6rem;
+    }
+
+    .flow-step-tag {
+      font-size: 0.72rem;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-light);
+      border: 1px solid var(--border-accent);
+      padding: 0.2rem 0.65rem;
+      border-radius: 99px;
+    }
+
+    .flow-card-title {
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--text);
+      margin: 0;
+      letter-spacing: -0.02em;
+    }
+
+    .flow-card-desc {
+      font-size: 0.94rem;
+      color: var(--text-secondary);
+      line-height: 1.65;
+      margin: 0.5rem 0 1.2rem;
+    }
+
+    .flow-pill-wrap {
+      display: flex;
+      gap: 0.6rem;
+      flex-wrap: wrap;
+    }
+
+    .flow-pill {
+      font-size: 0.76rem;
+      font-weight: 700;
+      padding: 0.3rem 0.75rem;
+      border-radius: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+    }
+
+    /* ── Features Grid ───────────────────────────────────────── */
+    .features {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 1.5rem 7rem;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+    }
+
+    @media(max-width: 768px) { .features-grid { grid-template-columns: 1fr; } }
+    @media(min-width: 769px) and (max-width: 1024px) { .features-grid { grid-template-columns: repeat(2, 1fr); } }
+
+    .landing-page .feature-card,
+    .feature-card {
+      background: var(--surface) !important;
+      border: 1px solid var(--border) !important;
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      transition: all 0.25s;
+      box-shadow: var(--shadow-sm);
+      color: var(--text) !important;
+    }
+    .landing-page .feature-card:hover,
+    .feature-card:hover {
+      border-color: var(--border-accent) !important;
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon-wrap {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      margin-bottom: 1rem;
+      background: var(--accent-light);
+    }
+
+    .feature-card h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-card p {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    /* ── Footer ──────────────────────────────────────────────── */
+    .lp-footer {
+      padding: 2.5rem 2.5rem;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .lp-footer p { font-size: 0.8rem; color: var(--muted); }
+
+    .lp-footer-links { display: flex; gap: 1.5rem; }
+    .lp-footer-links a {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.2s;
+    }
+    .lp-footer-links a:hover { color: var(--accent); }
+
+    /* ── Login Modal ─────────────────────────────────────────── */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.45);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 0;
+      transition: opacity 0.22s;
+    }
+    .modal-backdrop.open { display: flex; opacity: 1; }
+
+    .login-modal {
+      background: var(--surface);
+      border: 1px solid var(--border2);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 460px;
+      box-shadow: var(--shadow-lg);
+      transform: translateY(16px);
+      transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .modal-backdrop.open .login-modal { transform: translateY(0); }
+
+    .modal-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
+    }
+    .modal-top h2 {
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: var(--text);
+      margin: 0;
+    }
+    .modal-close-btn {
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 1rem;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .modal-close-btn:hover { background: var(--border); color: var(--text); }
+
+    .auth-nav-tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1.35rem;
+      background: var(--surface2);
+      padding: 0.35rem;
+      border-radius: 0.85rem;
+      border: 1px solid var(--border);
+    }
+    .auth-tab-btn {
+      flex: 1;
+      background: none;
+      border: 1px solid transparent;
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 700;
+      padding: 0.55rem 0.85rem;
+      border-radius: 0.65rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    .auth-tab-btn.active {
+      background: var(--surface);
+      color: var(--accent);
+      border-color: var(--border-accent);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .auth-pane { display: none; }
+    .auth-pane.active { display: block; }
+
+    .login-modal label {
+      display: block;
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+      margin-bottom: 0.45rem;
+    }
+
+    .login-modal input {
+      width: 100%;
+      padding: 0.78rem 1rem;
+      background: var(--surface);
+      border: 1.5px solid var(--border2);
+      border-radius: 0.75rem;
+      color: var(--text);
+      font-size: 0.95rem;
+      font-family: inherit;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      margin-bottom: 1.05rem;
+      box-sizing: border-box;
+    }
+    .login-modal input:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(67, 56, 202, 0.2);
+    }
+
+    .login-modal input::placeholder { color: var(--muted2); }
+
+    .input-hint {
+      font-size: 0.74rem;
+      color: var(--muted);
+      margin: -0.65rem 0 1rem;
+      line-height: 1.4;
+    }
+
+    .login-error {
+      background: var(--danger-bg);
+      border: 1px solid var(--danger-border);
+      border-radius: 0.65rem;
+      color: var(--danger-text);
+      font-size: 0.84rem;
+      padding: 0.7rem 0.95rem;
+      margin-bottom: 1.15rem;
+      display: none;
+      line-height: 1.45;
+      font-weight: 600;
+    }
+    .login-error.show { display: block; }
+
+    .login-success {
+      background: var(--success-bg);
+      border: 1px solid var(--success-border);
+      border-radius: 0.65rem;
+      color: var(--success-text);
+      font-size: 0.84rem;
+      padding: 0.7rem 0.95rem;
+      margin-bottom: 1.15rem;
+      display: none;
+      line-height: 1.45;
+      font-weight: 600;
+    }
+    .login-success.show { display: block; }
+
+    .btn-login-submit {
+      width: 100%;
+      padding: 0.85rem;
+      border-radius: 0.75rem;
+      border: none;
+      background: var(--accent);
+      color: #FFFFFF;
+      font-size: 0.98rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.22s;
+      box-shadow: 0 2px 8px rgba(67, 56, 202, 0.25);
+    }
+    .btn-login-submit:hover { transform: translateY(-1px); box-shadow: 0 4px 14px rgba(67, 56, 202, 0.35); background: var(--accent-hover); }
+    .btn-login-submit:active { transform: translateY(0); }
+
+    .modal-hint {
+      text-align: center;
+      margin-top: 1.15rem;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .modal-hint a, .modal-hint span { color: var(--accent); font-weight: 600; text-decoration: underline; cursor: pointer; }
+
+    @media (max-width: 650px) {
+      .flow-line-track, .flow-line-progress { left: 24px; }
+      .flow-node { width: 50px; height: 50px; min-width: 50px; font-size: 1.3rem; border-radius: 14px; }
+      .flow-step { gap: 1rem; }
+      .flow-card { padding: 1.2rem; }
+      .hero-title-wrap { min-height: 110px; }
+    }
+  </style>
+</head>
+
+<body class="landing-page">
+
+  <!-- ── Navbar ──────────────────────────────────────────────── -->
+  <header class="lp-nav">
+    <a href="#" class="lp-brand">
+      <div class="lp-brand-icon">📚</div>
+      <span class="lp-brand-name">Study<span>Flow</span></span>
+    </a>
+    <nav class="lp-nav-right">
+      <a href="#how-it-works" class="lp-nav-link">How It Works</a>
+      <a href="#features" class="lp-nav-link">Features</a>
+      <button id="open-login-btn" class="btn-login">Log In</button>
+      <button id="open-login-cta" class="btn-cta">Get Started →</button>
+    </nav>
+  </header>
+
+  <main style="flex:1;">
+
+    <!-- ── Hero (Image 1 Typewriter & 3D Retro Text) ──────────── -->
+    <section class="hero">
+      <div class="hero-badge">AI-Powered Study Scheduling</div>
+      
+      <div class="hero-title-wrap" aria-label="Plan Smarter. Study Better.">
+        <h1 class="hero-type-line hero-type-line-1" id="type-line-1"></h1>
+        <h1 class="hero-type-line hero-type-line-2" id="type-line-2"></h1>
+      </div>
+
+      <p>Turn your syllabus into a personalized, achievable daily schedule. Our smart algorithm factors in topic difficulty, exam dates, and your study capacity.</p>
+      
+      <div class="hero-actions">
+        <button class="hero-cta-primary" id="hero-login-btn">🚀 Start Studying Free</button>
+        <a href="#how-it-works" class="hero-cta-secondary">See How It Works ↓</a>
+      </div>
+    </section>
+
+    <!-- ── Process Flowchart (Image 2 Vertical Scroll Animation) ─ -->
+    <section id="how-it-works" class="flowchart-section">
+      <p class="section-label">THE PROCESS</p>
+      <h2 class="section-title flow-heading">UP AND RUNNING IN MINUTES</h2>
+      <p class="section-sub">No complex setup. Just sign in and start building your plan.</p>
+
+      <div class="flowchart-wrap" id="flowchart-container">
+        <!-- Progress track and fill -->
+        <div class="flow-line-track"></div>
+        <div class="flow-line-progress" id="flow-progress-line"></div>
+
+        <!-- Step 1 -->
+        <div class="flow-step" data-step="1">
+          <div class="flow-node">
+            <span>1</span>
+            <div class="flow-node-pulse"></div>
+          </div>
+          <div class="flow-card">
+            <div class="flow-card-header">
+              <h3 class="flow-card-title">Enter Your Syllabus</h3>
+              <span class="flow-step-tag">Step 01</span>
+            </div>
+            <p class="flow-card-desc">Add subjects and topics, assign difficulty and priority to each one. Upload a PDF or paste your syllabus to let AI organize it automatically.</p>
+            <div class="flow-pill-wrap">
+              <span class="flow-pill">📄 AI PDF Parser</span>
+              <span class="flow-pill">📚 Units &amp; Topics</span>
+              <span class="flow-pill">⚡ Instant Breakdown</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="flow-step" data-step="2">
+          <div class="flow-node">
+            <span>2</span>
+            <div class="flow-node-pulse"></div>
+          </div>
+          <div class="flow-card">
+            <div class="flow-card-header">
+              <h3 class="flow-card-title">Set Your Constraints</h3>
+              <span class="flow-step-tag">Step 02</span>
+            </div>
+            <p class="flow-card-desc">Tell the planner your exam date and how many hours you can study daily. We automatically structure sessions around your real schedule.</p>
+            <div class="flow-pill-wrap">
+              <span class="flow-pill">📅 Target Exam Date</span>
+              <span class="flow-pill">⏱️ Daily Study Capacity</span>
+              <span class="flow-pill">⚖️ Difficulty Weighting</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="flow-step" data-step="3">
+          <div class="flow-node">
+            <span>3</span>
+            <div class="flow-node-pulse"></div>
+          </div>
+          <div class="flow-card">
+            <div class="flow-card-header">
+              <h3 class="flow-card-title">Get Your Smart Plan</h3>
+              <span class="flow-step-tag">Step 03</span>
+            </div>
+            <p class="flow-card-desc">Our algorithm builds a balanced daily schedule optimized for your goals with built-in revision days before major exams.</p>
+            <div class="flow-pill-wrap">
+              <span class="flow-pill">🧠 Algorithm Optimization</span>
+              <span class="flow-pill">🎯 Milestone Dates</span>
+              <span class="flow-pill">🔄 Pre-Exam Revision</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="flow-step" data-step="4">
+          <div class="flow-node">
+            <span>4</span>
+            <div class="flow-node-pulse"></div>
+          </div>
+          <div class="flow-card">
+            <div class="flow-card-header">
+              <h3 class="flow-card-title">Track &amp; Adjust</h3>
+              <span class="flow-step-tag">Step 04</span>
+            </div>
+            <p class="flow-card-desc">Check off topics as you go. Fall behind or get ahead? One click recalculates and redistributes your sessions instantly.</p>
+            <div class="flow-pill-wrap">
+              <span class="flow-pill">✅ 1-Click Completion</span>
+              <span class="flow-pill">📊 Visual Analytics</span>
+              <span class="flow-pill">🔄 Adaptive Reschedule</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── Features ─────────────────────────────────────────── -->
+    <section id="features" class="features">
+      <p class="section-label">Why StudyFlow</p>
+      <h2 class="section-title" style="font-family:'Space Grotesk',sans-serif;font-size:clamp(1.8rem,3.5vw,2.5rem);text-align:center;color:var(--text);margin-bottom:0.75rem;">Everything you need to ace your exams</h2>
+      <p class="section-sub">Built for students who are serious about their goals.</p>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon-wrap" style="background:var(--accent-light);">🎯</div>
+          <h3>Personalized Planning</h3>
+          <p>Generate a schedule tailored to your syllabus and daily study time — not a rigid generic template.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap" style="background:var(--accent-light);">⚖️</div>
+          <h3>Difficulty-Based Scheduling</h3>
+          <p>Our algorithm allocates more time to hard topics and weak areas, so you focus where it matters most.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap" style="background:var(--accent-light);">📚</div>
+          <h3>Smart Revision</h3>
+          <p>Automatically reserves review slots before your exam to reinforce retention and reduce last-minute panic.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap" style="background:var(--accent-light);">⏱️</div>
+          <h3>Time-Aware Planning</h3>
+          <p>Respects your daily study limits so your schedule stays realistic, sustainable, and stress-free.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap" style="background:var(--accent-light);">📊</div>
+          <h3>Progress Tracking</h3>
+          <p>Monitor completed hours, topics, and overall readiness via a beautiful performance dashboard.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap" style="background:var(--accent-light);">📑</div>
+          <h3>PYQ Analyzer</h3>
+          <p>Upload past question papers to detect recurring topics, high-mark questions, multi-year recurrence, and syllabus gaps.</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon-wrap" style="background:var(--accent-light);">🔄</div>
+          <h3>Adaptive Rescheduling</h3>
+          <p>Missed a day? The system recalculates your remaining plan instantly, keeping you right on track.</p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ── Footer ───────────────────────────────────────────────── -->
+  <footer class="lp-footer" style="padding:3.5rem 2.5rem 2.5rem;background:var(--surface);border-top:1px solid var(--border);display:flex;flex-direction:column;gap:2rem;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:2rem;">
+      <div style="max-width:340px;">
+        <div class="lp-brand" style="margin-bottom:.75rem;">
+          <div class="lp-brand-icon">📚</div>
+          <span class="lp-brand-name">Study<span>Flow</span></span>
+        </div>
+        <p style="font-size:.85rem;color:var(--muted);line-height:1.6;margin:0;">Turn course syllabi into balanced daily study schedules. Automated topic extraction, exam countdowns, and progress tracking.</p>
+      </div>
+      <div style="display:flex;gap:3rem;flex-wrap:wrap;">
+        <div>
+          <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:.85rem;">Navigation</div>
+          <div style="display:flex;flex-direction:column;gap:.55rem;font-size:.84rem;">
+            <a href="#how-it-works" style="color:var(--text-secondary);text-decoration:none;transition:color .2s;">The Process</a>
+            <a href="#features" style="color:var(--text-secondary);text-decoration:none;transition:color .2s;">Features</a>
+            <a href="dashboard.html" style="color:var(--text-secondary);text-decoration:none;transition:color .2s;">Student Dashboard</a>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:.85rem;">Developer &amp; Contact</div>
+          <div style="display:flex;flex-direction:column;gap:.55rem;font-size:.84rem;">
+            <a href="mailto:aashirwadverma88@gmail.com" style="color:var(--text-secondary);text-decoration:none;display:flex;align-items:center;gap:.4rem;transition:color .2s;">✉️ aashirwadverma88@gmail.com</a>
+            <a href="http://www.linkedin.com/in/ashirwad-verma-98445837b" target="_blank" rel="noopener" style="color:var(--text-secondary);text-decoration:none;display:flex;align-items:center;gap:.4rem;transition:color .2s;">💼 LinkedIn Profile</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding-top:1.5rem;border-top:1px solid var(--border);font-size:.78rem;color:var(--muted);flex-wrap:wrap;gap:1rem;">
+      <p style="margin:0;">© 2026 StudyFlow. All rights reserved.</p>
+      <p style="margin:0;">Built for students who are serious about their goals.</p>
+    </div>
+  </footer>
+
+  <!-- ── Authentication Modal (Sign In / Sign Up) ─────────── -->
+  <div class="modal-backdrop" id="login-modal-backdrop">
+    <div class="login-modal" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
+      <div class="modal-top">
+        <h2 id="auth-modal-title">Student Portal</h2>
+        <button class="modal-close-btn" id="close-login-btn" aria-label="Close">✕</button>
+      </div>
+
+      <!-- Tabs -->
+      <div class="auth-nav-tabs">
+        <button type="button" class="auth-tab-btn active" id="tab-btn-signin" data-tab="signin">🔑 Sign In</button>
+        <button type="button" class="auth-tab-btn" id="tab-btn-signup" data-tab="signup">✨ Create Account</button>
+      </div>
+
+      <!-- 1. SIGN IN PANE -->
+      <div class="auth-pane active" id="pane-signin">
+        <form id="login-form" novalidate>
+          <label for="login-email">Email Address</label>
+          <input type="email" id="login-email" placeholder="student@university.edu" autocomplete="email" required>
+
+          <label for="login-password">Password</label>
+          <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password" required>
+
+          <div class="login-error" id="login-error"></div>
+          <div class="login-success" id="login-success"></div>
+
+          <button type="submit" class="btn-login-submit" id="btn-submit-signin">Sign In to Dashboard →</button>
+        </form>
+
+        <p class="modal-hint">Don't have an account yet? <a id="link-switch-to-signup">Create one for free</a></p>
+      </div>
+
+      <!-- 2. SIGN UP PANE -->
+      <div class="auth-pane" id="pane-signup">
+        <form id="signup-form" novalidate>
+          <label for="signup-name">Full Name</label>
+          <input type="text" id="signup-name" placeholder="e.g. Alex Sharma" autocomplete="name" required>
+
+          <label for="signup-email">University / Personal Email</label>
+          <input type="email" id="signup-email" placeholder="alex@university.edu" autocomplete="email" required>
+
+          <label for="signup-password">Password</label>
+          <input type="password" id="signup-password" placeholder="Min. 8 characters" autocomplete="new-password" required>
+          <div class="input-hint">At least 8 characters with uppercase, lowercase, and a number.</div>
+
+          <label for="signup-confirm-password">Confirm Password</label>
+          <input type="password" id="signup-confirm-password" placeholder="Re-enter your password" autocomplete="new-password" required>
+
+          <div class="login-error" id="signup-error"></div>
+          <div class="login-success" id="signup-success"></div>
+
+          <button type="submit" class="btn-login-submit" id="btn-submit-signup">Create Verified Account →</button>
+        </form>
+
+        <p class="modal-hint">Already have an account? <a id="link-switch-to-signin">Sign in here</a></p>
+      </div>
+
+    </div>
+  </div>
+
+  <script src="./js/auth.js"></script>
+  <script>
+    // ── 1. TYPEWRITER ANIMATION (PLAN SMARTER. STUDY BETTER.) ──
+    const line1El = document.getElementById('type-line-1');
+    const line2El = document.getElementById('type-line-2');
+    const textLine1 = "PLAN SMARTER.";
+    const textLine2 = "STUDY BETTER.";
+
+    function runTypewriter() {
+      let idx1 = 0;
+      let idx2 = 0;
+      const speed = 75; // ms per letter
+
+      const cursor = document.createElement('span');
+      cursor.className = 'typing-cursor';
+
+      line1El.innerHTML = '';
+      line2El.innerHTML = '';
+      line1El.appendChild(cursor);
+
+      function typeLine1() {
+        if (idx1 < textLine1.length) {
+          line1El.textContent = textLine1.slice(0, idx1 + 1);
+          line1El.appendChild(cursor);
+          idx1++;
+          setTimeout(typeLine1, speed);
+        } else {
+          setTimeout(() => {
+            line2El.appendChild(cursor);
+            typeLine2();
+          }, 200);
+        }
+      }
+
+      function typeLine2() {
+        if (idx2 < textLine2.length) {
+          line2El.textContent = textLine2.slice(0, idx2 + 1);
+          line2El.appendChild(cursor);
+          idx2++;
+          setTimeout(typeLine2, speed);
+        } else {
+          setTimeout(() => {
+            cursor.style.display = 'inline-block';
+          }, 300);
+        }
+      }
+
+      setTimeout(typeLine1, 300);
+    }
+
+    // ── 2. VERTICAL FLOWCHART SCROLL ANIMATION ────────────────
+    function initFlowchartScroll() {
+      const steps = document.querySelectorAll('.flow-step');
+      const progressLine = document.getElementById('flow-progress-line');
+      const container = document.getElementById('flowchart-container');
+
+      if (!steps.length || !container) return;
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('in-view');
+          }
+        });
+        updateProgressLine();
+      }, {
+        threshold: 0.25,
+        rootMargin: '0px 0px -40px 0px'
+      });
+
+      steps.forEach(step => observer.observe(step));
+
+      function updateProgressLine() {
+        const inViewSteps = document.querySelectorAll('.flow-step.in-view');
+        if (!inViewSteps.length) {
+          if (progressLine) progressLine.style.height = '0%';
+          return;
+        }
+        const lastStep = inViewSteps[inViewSteps.length - 1];
+        const stepNum = parseInt(lastStep.dataset.step, 10);
+        const totalSteps = steps.length;
+        const pct = Math.min(100, Math.round(((stepNum - 0.25) / (totalSteps - 1)) * 100));
+        if (progressLine) progressLine.style.height = (stepNum === 1 ? '15%' : pct + '%');
+      }
+
+      window.addEventListener('scroll', () => {
+        const windowHeight = window.innerHeight;
+        steps.forEach((step) => {
+          const sRect = step.getBoundingClientRect();
+          if (sRect.top <= windowHeight * 0.82) {
+            step.classList.add('in-view');
+          }
+        });
+        updateProgressLine();
+      }, { passive: true });
+    }
+
+    // ── 3. AUTH MODAL CONTROLLER & SESSION CHECK ──────────────
+    const backdrop = document.getElementById('login-modal-backdrop');
+    const closeBtn = document.getElementById('close-login-btn');
+    const tabBtnSignin = document.getElementById('tab-btn-signin');
+    const tabBtnSignup = document.getElementById('tab-btn-signup');
+    const paneSignin = document.getElementById('pane-signin');
+    const paneSignup = document.getElementById('pane-signup');
+    const authModalTitle = document.getElementById('auth-modal-title');
+
+    const loginForm = document.getElementById('login-form');
+    const loginError = document.getElementById('login-error');
+    const loginSuccess = document.getElementById('login-success');
+    const btnSubmitSignin = document.getElementById('btn-submit-signin');
+
+    const signupForm = document.getElementById('signup-form');
+    const signupError = document.getElementById('signup-error');
+    const signupSuccess = document.getElementById('signup-success');
+    const btnSubmitSignup = document.getElementById('btn-submit-signup');
+
+    function switchAuthTab(tab) {
+      loginError.classList.remove('show');
+      loginSuccess.classList.remove('show');
+      signupError.classList.remove('show');
+      signupSuccess.classList.remove('show');
+
+      if (tab === 'signup') {
+        tabBtnSignup.classList.add('active');
+        tabBtnSignin.classList.remove('active');
+        paneSignup.classList.add('active');
+        paneSignin.classList.remove('active');
+        authModalTitle.textContent = 'Create Student Account 👋';
+        setTimeout(() => document.getElementById('signup-name').focus(), 100);
+      } else {
+        tabBtnSignin.classList.add('active');
+        tabBtnSignup.classList.remove('active');
+        paneSignin.classList.add('active');
+        paneSignup.classList.remove('active');
+        authModalTitle.textContent = 'Welcome Back 👋';
+        setTimeout(() => document.getElementById('login-email').focus(), 100);
+      }
+    }
+
+    if (tabBtnSignin) tabBtnSignin.addEventListener('click', () => switchAuthTab('signin'));
+    if (tabBtnSignup) tabBtnSignup.addEventListener('click', () => switchAuthTab('signup'));
+
+    const linkSwitchToSignup = document.getElementById('link-switch-to-signup');
+    if (linkSwitchToSignup) linkSwitchToSignup.addEventListener('click', () => switchAuthTab('signup'));
+
+    const linkSwitchToSignin = document.getElementById('link-switch-to-signin');
+    if (linkSwitchToSignin) linkSwitchToSignin.addEventListener('click', () => switchAuthTab('signin'));
+
+    function openModal(defaultTab = 'signin') {
+      switchAuthTab(defaultTab);
+      backdrop.classList.add('open');
+    }
+
+    function closeModal() {
+      backdrop.classList.remove('open');
+      loginError.classList.remove('show');
+      signupError.classList.remove('show');
+    }
+
+    const openBtns = [
+      document.getElementById('open-login-btn'),
+      document.getElementById('open-login-cta'),
+      document.getElementById('hero-login-btn'),
+    ];
+    openBtns.forEach(btn => {
+      if (btn) {
+        btn.addEventListener('click', () => {
+          const tab = (btn.id === 'open-login-cta' || btn.id === 'hero-login-btn') ? 'signup' : 'signin';
+          openModal(tab);
+        });
+      }
+    });
+
+    if (closeBtn) closeBtn.addEventListener('click', closeModal);
+    if (backdrop) backdrop.addEventListener('click', (e) => { if (e.target === backdrop) closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
+
+    // Smooth scroll for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', (e) => {
+        const target = document.querySelector(a.getAttribute('href'));
+        if (target) { e.preventDefault(); target.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      });
+    });
+
+    // ── 4. SIGN IN SUBMISSION ─────────────────────────────────
+    if (loginForm) {
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value;
+
+        loginError.classList.remove('show');
+        loginSuccess.classList.remove('show');
+
+        if (!email || !password) {
+          loginError.textContent = 'Please enter both your email address and password.';
+          loginError.classList.add('show');
+          return;
+        }
+
+        btnSubmitSignin.textContent = 'Signing in…';
+        btnSubmitSignin.disabled = true;
+
+        const result = await AuthManager.login(email, password);
+
+        if (result.success) {
+          btnSubmitSignin.textContent = '✓ Success! Redirecting…';
+          btnSubmitSignin.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+          setTimeout(() => {
+            window.location.href = 'dashboard.html';
+          }, 400);
+        } else {
+          btnSubmitSignin.textContent = 'Sign In to Dashboard →';
+          btnSubmitSignin.disabled = false;
+
+          if (result.unverified) {
+            loginError.innerHTML = `${result.message} <br><button type="button" id="btn-resend-inline" style="background:none;border:none;color:var(--accent);text-decoration:underline;cursor:pointer;font-weight:700;margin-top:0.35rem;padding:0;">Click here to resend verification email →</button>`;
+            loginError.classList.add('show');
+
+            const btnResendInline = document.getElementById('btn-resend-inline');
+            if (btnResendInline) {
+              btnResendInline.addEventListener('click', async () => {
+                btnResendInline.textContent = 'Sending link...';
+                const resendRes = await AuthManager.resendVerification(email);
+                if (resendRes.success) {
+                  loginSuccess.innerHTML = `${resendRes.message}${resendRes.devLink ? `<br><a href="${resendRes.devLink}" target="_blank" style="color:var(--accent);font-weight:bold;">[Dev Link: Verify Now]</a>` : ''}`;
+                  loginSuccess.classList.add('show');
+                } else {
+                  loginError.textContent = resendRes.message;
+                }
+              });
+            }
+          } else {
+            loginError.textContent = result.message || 'Invalid email or password.';
+            loginError.classList.add('show');
+            document.getElementById('login-password').value = '';
+            document.getElementById('login-password').focus();
+          }
+        }
+      });
+    }
+
+    // ── 5. SIGN UP SUBMISSION ─────────────────────────────────
+    if (signupForm) {
+      signupForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = document.getElementById('signup-name').value.trim();
+        const email = document.getElementById('signup-email').value.trim();
+        const password = document.getElementById('signup-password').value;
+        const confirmPassword = document.getElementById('signup-confirm-password').value;
+
+        signupError.classList.remove('show');
+        signupSuccess.classList.remove('show');
+
+        if (!name || !email || !password || !confirmPassword) {
+          signupError.textContent = 'Please fill out all required fields.';
+          signupError.classList.add('show');
+          return;
+        }
+
+        if (password !== confirmPassword) {
+          signupError.textContent = 'Passwords do not match. Please re-enter.';
+          signupError.classList.add('show');
+          return;
+        }
+
+        btnSubmitSignup.textContent = 'Creating account…';
+        btnSubmitSignup.disabled = true;
+
+        const result = await AuthManager.signup(name, email, password, confirmPassword);
+
+        btnSubmitSignup.textContent = 'Create Verified Account →';
+        btnSubmitSignup.disabled = false;
+
+        if (result.success) {
+          signupForm.reset();
+          signupSuccess.innerHTML = `<strong>🎉 Account Created!</strong><br>${result.message}${result.devLink ? `<br><br><a href="${result.devLink}" target="_blank" style="color:var(--accent);font-weight:bold;text-decoration:underline;">[Dev Link: Verify Email Now]</a>` : ''}`;
+          signupSuccess.classList.add('show');
+        } else {
+          signupError.textContent = result.message || 'Failed to create account.';
+          signupError.classList.add('show');
+        }
+      });
+    }
+
+    // ── 6. INITIALIZATION & SESSION STATUS CHECK ──────────────
+    document.addEventListener('DOMContentLoaded', async () => {
+      runTypewriter();
+      initFlowchartScroll();
+
+      // Check if session exists and update navbar
+      const session = await AuthManager.checkSession();
+      if (session.authenticated && session.user) {
+        const navRight = document.querySelector('.lp-nav-right');
+        if (navRight) {
+          navRight.innerHTML = `
+            <a href="dashboard.html" class="btn-cta" style="display:flex;align-items:center;gap:0.4rem;">
+              <span>📚 Open Dashboard</span>
+              <span style="font-size:0.75rem;opacity:0.8;">(${session.user.name.split(' ')[0]})</span>
+            </a>
+            <button onclick="logout()" class="btn-login" style="padding:0.45rem 1rem;font-size:0.82rem;">Sign Out</button>
+          `;
+        }
+
+        const heroLoginBtn = document.getElementById('hero-login-btn');
+        if (heroLoginBtn) {
+          heroLoginBtn.textContent = '🚀 Go to My Dashboard →';
+          heroLoginBtn.onclick = () => { window.location.href = 'dashboard.html'; };
+        }
+      }
+
+      // Check URL search parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('auth') === 'login') {
+        openModal('signin');
+      } else if (urlParams.get('auth') === 'signup') {
+        openModal('signup');
+      }
+    });
+  </script>
+
+</body>
+</html>
