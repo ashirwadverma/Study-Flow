@@ -412,6 +412,7 @@
             <span class="p-badge" id="prev-topics-count">0 Topics</span>
             <span class="p-badge" id="prev-units-count">0 Units</span>
             <span class="p-badge" id="prev-exam-badge">Exam: Not set</span>
+            <span class="p-badge" id="prev-db-badge" style="display:none;background:rgba(16,185,129,0.12);color:#10b981;border:1px solid rgba(16,185,129,0.3);">✓ Saved to Supabase</span>
           </div>
         </div>
 
@@ -926,6 +927,10 @@
   <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
 
+  <script src="/js/supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>if (!window.supabase) document.write('<script src="/vendor/supabase/supabase.js"><\/script>');</script>
+  <script src="./js/supabaseClient.js"></script>
   <script src="./js/auth.js"></script>
   <script src="./js/pyq.js"></script>
   <script src="./js/assessment.js"></script>
@@ -1493,7 +1498,7 @@
       document.getElementById('edit-sub-modal-error').style.display='none';
     };
 
-    window.saveEditedSubject=function(){
+    window.saveEditedSubject=async function(){
       const id=document.getElementById('edit-sub-id').value;
       const name=document.getElementById('edit-sub-name').value.trim();
       const code=document.getElementById('edit-sub-code').value.trim();
@@ -1521,9 +1526,18 @@
       showToast(`Subject updated to "${name}" across all pages! ✏️`);
       closeEditSubjectModal();
       renderAll();
+
+      // Persist update to Supabase
+      const targetId = (s && s.supabaseId) ? s.supabaseId : id;
+      if(targetId && !String(targetId).startsWith('sub_') && window.AuthManager){
+        AuthManager.updateSupabaseSubject(targetId, {
+          subject_name: name,
+          subject_code: code || null
+        });
+      }
     };
 
-    window.deleteSubject=function(id){
+    window.deleteSubject=async function(id){
       if(!confirm('Are you sure you want to remove this subject and all its planned sessions?'))return;
       let subs=getSubs(),sess=getSess();
       const s=subs.find(x=>x.id===id);
@@ -1534,6 +1548,12 @@
       showToast('Subject removed.');
       if(curSubjectFilter===id)curSubjectFilter='all';
       renderAll();
+
+      // Delete from Supabase
+      const targetId = (s && s.supabaseId) ? s.supabaseId : id;
+      if(targetId && !String(targetId).startsWith('sub_') && window.AuthManager){
+        AuthManager.deleteSupabaseSubject(targetId);
+      }
     };
 
     function populateSubjectSelect(subs){
@@ -1571,12 +1591,48 @@
       openModal('upload-modal-backdrop');
     }
 
-    window.saveSubject=function(){
+    window.saveSubject=async function(){
       const name=document.getElementById('sub-name').value.trim(),examDate=document.getElementById('sub-exam-date').value,color=document.getElementById('sub-color').value;
       const err=document.getElementById('sub-modal-error');
       if(!name){err.textContent='Subject name is required.';err.style.display='block';return;}
-      const subs=getSubs();subs.push({id:'sub_'+Date.now(),name,examDate,color});saveSubs(subs);
-      addAct(`Added subject: <strong>${name}</strong>`);showToast(`Added ${name}!`);closeSubjectModal();renderAll();
+      
+      const tempId='sub_'+Date.now();
+      const subs=getSubs();
+      subs.push({id:tempId,name,examDate,color,progress:0});
+      saveSubs(subs);
+      addAct(`Added subject: <strong>${name}</strong>`);
+      showToast(`Added ${name}!`);
+      closeSubjectModal();
+      renderAll();
+
+      // Persist to Supabase
+      if(window.AuthManager){
+        try{
+          const res=await AuthManager.createSupabaseSubject({
+            subject_name:name,
+            subject_code:null,
+            progress:0
+          });
+          if(res&&res.ok&&res.data&&res.data.data){
+            const currentSubs=getSubs();
+            const currentSess=getSess();
+            const found=currentSubs.find(s=>s.id===tempId);
+            if(found){
+              const realId=String(res.data.data.id);
+              found.id=realId;
+              found.supabaseId=res.data.data.id;
+              currentSess.forEach(ses=>{
+                if(ses.subjectId===tempId)ses.subjectId=realId;
+              });
+              saveSubs(currentSubs);
+              saveSess(currentSess);
+              renderAll();
+            }
+          }
+        }catch(syncErr){
+          console.warn('[Supabase] Subject creation sync note:', syncErr.message);
+        }
+      }
     };
 
     window.saveSession=function(){
@@ -1733,11 +1789,17 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
         },1900);
 
         try{
+          const apiBase=(window.location.protocol==='file:'||(window.location.port&&window.location.port!=='5000'))?'http://localhost:5000':'';
+          const token=typeof AuthManager!=='undefined'?AuthManager.getToken():'';
           let res;
           if(formData){
-            res=await fetch('/api/syllabus/analyze',{method:'POST',body:formData});
+            const headers={};
+            if(token)headers['Authorization']=`Bearer ${token}`;
+            res=await fetch(`${apiBase}/api/syllabus/analyze`,{method:'POST',headers,body:formData});
           }else{
-            res=await fetch('/api/syllabus/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(jsonBody)});
+            const headers={'Content-Type':'application/json'};
+            if(token)headers['Authorization']=`Bearer ${token}`;
+            res=await fetch(`${apiBase}/api/syllabus/analyze`,{method:'POST',headers,body:JSON.stringify(jsonBody)});
           }
 
           clearInterval(interval);
@@ -1750,6 +1812,66 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
           currentAiResult=data.data;
           if(examDateOverride)currentAiResult.examDate=examDateOverride;
 
+          // ─── AUTOMATIC SAVE OF EXTRACTED SUBJECT TO BACKEND /api/subjects ───
+          let subName = (currentAiResult.subjectName || '').trim();
+          if (!subName && currentAiResult.subjects && currentAiResult.subjects.length) {
+            subName = (currentAiResult.subjects[0].name || '').trim();
+          }
+          if (!subName && data.filename) {
+            subName = data.filename.replace(/\.(pdf|txt|png|jpe?g|webp)$/i, '').replace(/[-_]/g, ' ').trim();
+          }
+          if (!subName) subName = 'Extracted Course';
+
+          let subCode = currentAiResult.courseCode || null;
+          if (!subCode && currentAiResult.subjects && currentAiResult.subjects.length) {
+            subCode = currentAiResult.subjects[0].code || null;
+          }
+          if (subCode) {
+            subCode = String(subCode).trim();
+            if (subCode.length > 50) subCode = subCode.slice(0, 50);
+            if (subCode.length === 0) subCode = null;
+          }
+
+          // Ensure subject is saved only once per successful upload
+          if (window.AuthManager && !currentAiResult._hasBeenAutoSaved) {
+            currentAiResult._hasBeenAutoSaved = true;
+            try {
+              const saveRes = await AuthManager.createSupabaseSubject({
+                subject_name: subName,
+                subject_code: subCode,
+                progress: 0,
+              });
+
+              if (saveRes && saveRes.ok && saveRes.data && saveRes.data.data) {
+                const savedObj = Array.isArray(saveRes.data.data) ? saveRes.data.data[0] : saveRes.data.data;
+                currentAiResult.savedSubject = savedObj;
+                currentAiResult.savedSubjectStatus = saveRes.data.alreadyExists ? 'existing' : 'created';
+
+                if (saveRes.data.alreadyExists) {
+                  showToast(`Subject "${subName}" already exists in Supabase. Reusing existing record. 📚`, 'ℹ️');
+                } else {
+                  showToast(`Extracted subject "${subName}" automatically saved to Supabase! 🚀`, '✨');
+                }
+
+                // Refresh dashboard immediately after saving
+                await syncSubjectsWithSupabase();
+                renderAll();
+              } else {
+                console.warn('[Supabase] Subject auto-save notice:', saveRes);
+                if (saveRes && saveRes.status === 403) {
+                  showToast('Database notice: RLS policy is awaiting SQL script execution in Supabase. Preview is active.', '⚠️');
+                } else if (saveRes && saveRes.data && saveRes.data.message) {
+                  showToast(`Database notice: ${saveRes.data.message}`, '⚠️');
+                }
+              }
+            } catch (saveErr) {
+              console.warn('[Supabase] Auto-save error:', saveErr);
+            }
+          } else if (data.savedSubject) {
+            currentAiResult.savedSubject = data.savedSubject;
+            currentAiResult.savedSubjectStatus = data.savedSubjectStatus;
+          }
+
           closeUploadModal();
           openAiPreview(currentAiResult);
 
@@ -1757,7 +1879,11 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
           clearInterval(interval);
           document.getElementById('upload-input-view').style.display='block';
           document.getElementById('upload-loading-view').style.display='none';
-          err.textContent=e.message||'Error connecting to syllabus AI server.';
+          let errorMsg=e.message||'Error connecting to syllabus AI server.';
+          if(errorMsg==='Failed to fetch'||errorMsg.includes('fetch')){
+            errorMsg='Failed to fetch from server. Please verify the backend server is running at http://localhost:5000 (npm start).';
+          }
+          err.textContent=errorMsg;
           err.style.display='block';
         }
       });
@@ -1783,6 +1909,16 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
       }
       document.getElementById('prev-input-examdate').value=examDate;
       document.getElementById('prev-exam-badge').textContent='Exam: '+fmtDate(examDate);
+
+      const dbBadge = document.getElementById('prev-db-badge');
+      if (dbBadge) {
+        if (data.savedSubject && data.savedSubject.id) {
+          dbBadge.textContent = `✓ Supabase Sync #${data.savedSubject.id}`;
+          dbBadge.style.display = 'inline-flex';
+        } else {
+          dbBadge.style.display = 'none';
+        }
+      }
 
       // Collect all topics/sessions
       let sessionsList=[];
@@ -1845,20 +1981,60 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
         const examDate=document.getElementById('prev-input-examdate').value;
         const color=selectedColorTag||'#4f46e5';
 
+        // Bind Supabase Subject ID if saved during analysis
+        let newSubId='sub_'+Date.now();
+        let supabaseId=null;
+        if(currentAiResult.savedSubject && currentAiResult.savedSubject.id){
+          newSubId=String(currentAiResult.savedSubject.id);
+          supabaseId=currentAiResult.savedSubject.id;
+        }
+
         const subs=getSubs();
-        const newSubId='sub_'+Date.now();
         const newSubject={
           id:newSubId,
+          supabaseId:supabaseId,
           name:subName,
           examDate:examDate,
           color:color,
           instructor:currentAiResult.instructor||null,
           courseCode:currentAiResult.courseCode||null,
           summary:currentAiResult.summary||null,
-          units:currentAiResult.units||[]
+          units:currentAiResult.units||[],
+          progress:0
         };
         subs.push(newSubject);
         saveSubs(subs);
+
+        // If not already persisted to Supabase, save now in background
+        if(!supabaseId && window.AuthManager){
+          (async()=>{
+            try{
+              const res=await AuthManager.createSupabaseSubject({
+                subject_name:subName,
+                subject_code:currentAiResult.courseCode||null,
+                progress:0
+              });
+              if(res&&res.ok&&res.data&&res.data.data){
+                const currentSubs=getSubs();
+                const currentSess=getSess();
+                const found=currentSubs.find(s=>s.id===newSubId);
+                if(found){
+                  const realId=String(res.data.data.id);
+                  found.id=realId;
+                  found.supabaseId=res.data.data.id;
+                  currentSess.forEach(ses=>{
+                    if(ses.subjectId===newSubId)ses.subjectId=realId;
+                  });
+                  saveSubs(currentSubs);
+                  saveSess(currentSess);
+                  renderAll();
+                }
+              }
+            }catch(e){
+              console.warn('[Supabase] Background save of imported subject note:', e.message);
+            }
+          })();
+        }
 
         const sess=getSess();
         const sessionsList=currentAiResult._normalizedSessions||[];
@@ -2005,6 +2181,88 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
       }
     });
 
+    // ─── SUPABASE SUBJECTS INTEGRATION ─────────────────────────
+    async function syncSubjectsWithSupabase() {
+      if (!window.AuthManager) return;
+      try {
+        const remoteSubs = await AuthManager.getSupabaseSubjects();
+        if (remoteSubs && Array.isArray(remoteSubs)) {
+          console.log(`[Supabase] Retrieved ${remoteSubs.length} subjects from database.`);
+          const localSubs = getSubs();
+          const localSess = getSess();
+
+          // Merge remote records with local state
+          const mergedSubs = remoteSubs.map(rs => {
+            const match = localSubs.find(ls => 
+              String(ls.id) === String(rs.id) || 
+              String(ls.supabaseId) === String(rs.id) || 
+              (ls.name && ls.name.toLowerCase() === (rs.subject_name || rs.name || '').toLowerCase())
+            );
+
+            // Compute current progress from local sessions if available
+            let progressVal = rs.progress !== undefined ? Number(rs.progress) : 0;
+            if (match) {
+              const tot = localSess.filter(x => String(x.subjectId) === String(match.id) || String(x.subjectId) === String(rs.id)).length;
+              const dn = localSess.filter(x => (String(x.subjectId) === String(match.id) || String(x.subjectId) === String(rs.id)) && (x.status === 'done' || x.status === 'completed')).length;
+              if (tot > 0) {
+                progressVal = Math.round((dn / tot) * 100);
+              }
+            }
+
+            return {
+              id: String(rs.id),
+              supabaseId: rs.id,
+              name: rs.subject_name || rs.name,
+              courseCode: rs.subject_code || rs.code || (match ? match.courseCode : null),
+              progress: progressVal,
+              examDate: match ? match.examDate : null,
+              color: match ? match.color : '#4f46e5',
+              instructor: match ? match.instructor : null,
+              summary: match ? match.summary : null,
+              units: match ? match.units : []
+            };
+          });
+
+          // Retain any local subjects that have not yet been synchronized
+          localSubs.forEach(ls => {
+            if (!mergedSubs.some(ms => String(ms.id) === String(ls.id) || (ms.name && ms.name.toLowerCase() === ls.name.toLowerCase()))) {
+              mergedSubs.push(ls);
+            }
+          });
+
+          localStorage.setItem(getUserKey('subjects'), JSON.stringify(mergedSubs));
+          renderAll();
+        }
+      } catch (err) {
+        console.warn('[Supabase] Subject sync note:', err.message);
+      }
+    }
+
+    window.syncSubjectProgressToSupabase = async function(subjectId) {
+      if (!window.AuthManager || !subjectId) return;
+      try {
+        const subs = getSubs();
+        const sess = getSess();
+        const s = subs.find(x => String(x.id) === String(subjectId) || String(x.supabaseId) === String(subjectId));
+        if (!s) return;
+
+        const targetId = s.supabaseId || s.id;
+        if (!targetId || String(targetId).startsWith('sub_')) return;
+
+        const tot = sess.filter(x => String(x.subjectId) === String(s.id) || String(x.subjectId) === String(targetId)).length;
+        const dn = sess.filter(x => (String(x.subjectId) === String(s.id) || String(x.subjectId) === String(targetId)) && (x.status === 'done' || x.status === 'completed')).length;
+        const pct = tot ? Math.round((dn / tot) * 100) : 0;
+
+        s.progress = pct;
+        saveSubs(subs);
+
+        await AuthManager.updateSupabaseSubject(targetId, { progress: pct });
+        console.log(`[Supabase] Persisted progress ${pct}% for subject ${targetId}`);
+      } catch (err) {
+        console.warn('[Supabase] Failed to persist subject progress:', err.message);
+      }
+    };
+
     // Initial render & authentication check
     async function initDashboard() {
       const user = await AuthManager.requireAuth();
@@ -2044,6 +2302,9 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
       } catch (e) {
         console.warn('Could not sync initial cloud data:', e);
       }
+
+      // Synchronize subjects directly with Supabase
+      await syncSubjectsWithSupabase();
 
       initNotesSystem();
       if(window.PYQManager) {

@@ -1,60 +1,90 @@
+const {
+  createAuthenticatedClient,
+  isConfigured,
+} = require("../config/supabase");
+
 const db = require("../services/dbAdapter");
-const { extractTokenFromRequest, verifyAuthToken } = require("../utils/tokenUtil");
+const { extractTokenFromRequest } = require("../utils/tokenUtil");
 
 async function requireAuth(req, res, next) {
   try {
-    let userId = req.session && req.session.userId;
-    let user = null;
-
-    // 1. Try finding user from active session
-    if (userId) {
-      user = await db.findUserById(userId);
+    // 1. Ensure Supabase is configured
+    if (!isConfigured) {
+      return res.status(503).json({
+        success: false,
+        message: "Authentication service is not configured.",
+      });
     }
 
-    // 2. If no session user found, attempt token recovery from headers/cookies
-    if (!user) {
-      const rawToken = extractTokenFromRequest(req);
-      if (rawToken) {
-        const payload = verifyAuthToken(rawToken);
-        if (payload && payload.userId) {
-          user = await db.findUserById(payload.userId);
-          if (user) {
-            // Rehydrate session
-            req.session = req.session || {};
-            req.session.userId = (user._id || user.id).toString();
-            req.session.userEmail = user.email;
-          }
-        }
-      }
-    }
+    // 2. Extract Bearer token from request
+    const accessToken = extractTokenFromRequest(req);
 
-    // 3. If still no user, reject
-    if (!user) {
+    if (!accessToken) {
       return res.status(401).json({
         success: false,
-        message: "Authentication required. Please log in to access this resource.",
+        message: "Authentication required. Please log in.",
       });
     }
 
-    // 4. Check verification status
-    if (!user.isVerified) {
-      if (req.session && typeof req.session.destroy === "function") {
-        req.session.destroy(() => {});
-      }
-      return res.status(403).json({
+    // 3. Verify token and create authenticated client
+    let authResult;
+
+    try {
+      authResult = await createAuthenticatedClient(accessToken);
+    } catch (authError) {
+      console.warn("Supabase authentication failed:", authError.message);
+
+      return res.status(401).json({
         success: false,
-        message: "Your email address is unverified. Please verify your email first.",
+        message:
+          "Invalid or expired authentication token. Please log in again.",
       });
     }
 
-    req.user =
-      typeof user.toSafeObject === "function"
-        ? user.toSafeObject()
-        : { id: user.id || user._id, name: user.name, email: user.email };
+    const { client, user: sbUser } = authResult;
 
-    next();
+    // 4. Get identity only from the verified Supabase user
+    const userId = sbUser.id;
+
+    const userName =
+      sbUser.user_metadata?.name ||
+      sbUser.user_metadata?.full_name ||
+      (sbUser.email ? sbUser.email.split("@")[0] : "Student");
+
+    // 5. Attach authenticated information to request
+    req.supabaseUser = sbUser;
+    req.supabaseClient = client;
+    req.userId = userId;
+
+    req.user = {
+      id: userId,
+      _id: userId,
+      email: sbUser.email,
+      name: userName,
+      emailConfirmed: Boolean(sbUser.email_confirmed_at || sbUser.confirmed_at),
+    };
+
+    // 6. Optional: Sync user with existing local database
+    // Supabase remains the authentication authority.
+    try {
+      const existing = await db.findUserById(userId);
+
+      if (!existing) {
+        await db.createUser({
+          id: userId,
+          name: userName,
+          email: sbUser.email,
+        });
+      }
+    } catch (dbError) {
+      console.warn("Local user sync skipped:", dbError.message);
+    }
+
+    // 7. Continue to protected route
+    return next();
   } catch (error) {
     console.error("requireAuth error:", error);
+
     return res.status(500).json({
       success: false,
       message: "Internal authentication error.",

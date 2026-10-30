@@ -300,6 +300,9 @@ const AssessmentManager = {
       if (typeof saveSess === 'function') {
         saveSess(sessions);
       }
+      if (typeof window.syncSubjectProgressToSupabase === 'function' && targetSession.subjectId) {
+        window.syncSubjectProgressToSupabase(targetSession.subjectId);
+      }
     }
 
     if (passed) {

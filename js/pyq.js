@@ -18,6 +18,22 @@ const PYQManager = {
   filterMarks: 'all',
   searchKeyword: '',
 
+  // Authenticated fetch helper that forwards the Supabase Bearer token
+  async fetchAuth(url, options = {}) {
+    if (window.AuthManager && typeof window.AuthManager.fetchWithAuth === 'function') {
+      return window.AuthManager.fetchWithAuth(url, options);
+    }
+    const token = localStorage.getItem('studyflow_auth_token') || '';
+    const headers = { ...(options.headers || {}) };
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+      headers['x-auth-token'] = token;
+    }
+    const apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '5000')) ? 'http://localhost:5000' : '';
+    const fullUrl = url.startsWith('http') ? url : (apiBase + (url.startsWith('/') ? '' : '/') + url);
+    return fetch(fullUrl, { ...options, headers, credentials: 'include' });
+  },
+
   // Initialize PYQ Tab
   async init() {
     console.log("Initializing Previous-Year Question Paper Analyzer...");
@@ -28,7 +44,7 @@ const PYQManager = {
   // Load user subjects and past PYQ analyses
   async loadSubjectsAndHistory() {
     try {
-      const historyRes = await fetch('/api/pyq/history', { credentials: 'include' });
+      const historyRes = await this.fetchAuth('/api/pyq/history');
       const historyData = await historyRes.json();
       if (historyData.success) {
         this.pyqHistory = historyData.data || [];
@@ -116,7 +132,7 @@ const PYQManager = {
     }
 
     try {
-      const res = await fetch(`/api/pyq/subject/${encodeURIComponent(subjectId)}`, { credentials: 'include' });
+      const res = await this.fetchAuth(`/api/pyq/subject/${encodeURIComponent(subjectId)}`);
       const data = await res.json();
       if (data.success && data.data) {
         this.activeAnalysis = data.data;
@@ -1140,13 +1156,8 @@ const PYQManager = {
     });
 
     try {
-      const res = await fetch('/api/pyq/upload-analyze', {
+      const res = await this.fetchAuth('/api/pyq/upload-analyze', {
         method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('studyflow_auth_token') || ''}`,
-          'x-auth-token': localStorage.getItem('studyflow_auth_token') || ''
-        },
         body: formData
       });
 
@@ -1179,13 +1190,8 @@ const PYQManager = {
     }
 
     try {
-      const res = await fetch(`/api/pyq/paper/${encodeURIComponent(this.activeSubjectId)}/${encodeURIComponent(paperId)}`, {
-        method: 'DELETE',
-        credentials: 'include',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('studyflow_auth_token') || ''}`,
-          'x-auth-token': localStorage.getItem('studyflow_auth_token') || ''
-        }
+      const res = await this.fetchAuth(`/api/pyq/paper/${encodeURIComponent(this.activeSubjectId)}/${encodeURIComponent(paperId)}`, {
+        method: 'DELETE'
       });
       const data = await res.json();
 
@@ -1247,10 +1253,9 @@ const PYQManager = {
     }
 
     try {
-      const res = await fetch(`/api/pyq/question/${encodeURIComponent(this.activeSubjectId)}/${encodeURIComponent(qId)}`, {
+      const res = await this.fetchAuth(`/api/pyq/question/${encodeURIComponent(this.activeSubjectId)}/${encodeURIComponent(qId)}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           matchedTopic: topic,
           detectedUnit: unit,
@@ -1318,10 +1323,9 @@ const PYQManager = {
     const dailyStudyHours = parseFloat(document.getElementById('plan-modal-hours').value) || 3.0;
 
     try {
-      const res = await fetch('/api/pyq/generate-plan', {
+      const res = await this.fetchAuth('/api/pyq/generate-plan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
         body: JSON.stringify({
           subjectId: this.activeSubjectId,
           examDate,

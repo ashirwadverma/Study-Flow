@@ -1,3 +1,5 @@
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "..", "..", ".env") });
 const { GoogleGenAI } = require("@google/genai");
 
 const apiKey = (process.env.GEMINI_API_KEY || "").trim();
@@ -260,7 +262,9 @@ ${syllabusText ? `\nSyllabus Text Snippet:\n${syllabusText.slice(0, 40000)}` : "
   for (const model of candidateModels) {
     try {
       console.log(`Analyzing syllabus using Gemini model: ${model}...`);
-      const response = await ai.models.generateContent({
+      const currentApiKey = (process.env.GEMINI_API_KEY || "").trim();
+      const client = new GoogleGenAI({ apiKey: currentApiKey });
+      const response = await client.models.generateContent({
         model,
         contents,
       });

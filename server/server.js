@@ -7,11 +7,29 @@ const MongoStore = require("connect-mongo");
 
 dotenv.config();
 
+// Prevent unhandled rejections / uncaught connection errors from terminating the server process
+process.on("unhandledRejection", (reason) => {
+  if (reason && (reason.name === "MongoServerSelectionError" || String(reason).includes("ECONNREFUSED") || String(reason).includes("EACCES"))) {
+    console.warn("MongoDB offline notice: Server running with in-memory & local_store.json fallback.");
+    return;
+  }
+  console.warn("Unhandled Rejection notice:", reason && (reason.message || reason));
+});
+
+process.on("uncaughtException", (err) => {
+  if (err && (err.name === "MongoServerSelectionError" || err.message?.includes("ECONNREFUSED") || err.message?.includes("EACCES"))) {
+    console.warn("MongoDB offline notice: Server running with in-memory & local_store.json fallback.");
+    return;
+  }
+  console.error("Uncaught Exception:", err);
+});
+
 const { connectDB } = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const studyDataRoutes = require("./routes/studyDataRoutes");
 const syllabusRoutes = require("./routes/syllabusRoutes");
 const pyqRoutes = require("./routes/pyqRoutes");
+const subjectRoutes = require("./routes/subjectRoutes");
 const {
   topicRouter,
   updateNotificationPreferences,
@@ -65,7 +83,8 @@ app.use((req, res, next) => {
 let sessionStore = undefined;
 try {
   const StoreClass = MongoStore.MongoStore || MongoStore.default || MongoStore;
-  if (StoreClass && typeof StoreClass.create === "function" && process.env.MONGODB_URI) {
+  const isAtlasUri = process.env.MONGODB_URI && process.env.MONGODB_URI.includes("mongodb+srv://");
+  if (StoreClass && typeof StoreClass.create === "function" && isAtlasUri) {
     sessionStore = StoreClass.create({
       mongoUrl: process.env.MONGODB_URI,
       collectionName: "sessions",
@@ -73,7 +92,10 @@ try {
       autoRemove: "native",
       touchAfter: 24 * 3600,
     });
+    sessionStore.on("error", (err) => console.warn("Session store notice:", err.message));
     console.log("✓ MongoStore session persistence configured with MongoDB Atlas (10-year retention)");
+  } else {
+    console.log("✓ Session store initialized with in-memory persistence (local mode)");
   }
 } catch (err) {
   console.warn("Session store notice:", err.message);
@@ -124,6 +146,7 @@ app.use(async (req, res, next) => {
 // API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/user", studyDataRoutes);
+app.use("/api/subjects", subjectRoutes);
 app.use("/api/syllabus", syllabusRoutes);
 app.use("/api/pyq", pyqRoutes);
 app.use("/api/topics", topicRouter);
@@ -132,6 +155,24 @@ app.get("/api/notifications", requireAuth, getNotifications);
 app.post("/api/pyq-sets/:setId/attempts", requireAuth, (req, res, next) => {
   req.params.topicId = req.params.setId;
   recordPYQPractice(req, res, next);
+});
+
+// Supabase public configuration & local UMD bundle for frontend
+app.use("/vendor/supabase", express.static(path.join(__dirname, "../node_modules/@supabase/supabase-js/dist/umd")));
+
+app.get("/js/supabase-config.js", (req, res) => {
+  res.setHeader("Content-Type", "application/javascript");
+  res.send(`window.SUPABASE_CONFIG = {
+  url: ${JSON.stringify(process.env.SUPABASE_URL || "")},
+  publishableKey: ${JSON.stringify(process.env.SUPABASE_PUBLISHABLE_KEY || "")}
+};`);
+});
+
+app.get("/api/config/supabase", (req, res) => {
+  res.json({
+    supabaseUrl: process.env.SUPABASE_URL || "",
+    supabasePublishableKey: process.env.SUPABASE_PUBLISHABLE_KEY || "",
+  });
 });
 
 // Health check route
@@ -158,6 +199,14 @@ app.use((error, req, res, next) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`✓ Server running at http://localhost:${PORT}`);
+});
+
+server.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(`✗ Port ${PORT} is already in use by another process.`);
+  } else {
+    console.error("Server error:", err);
+  }
 });

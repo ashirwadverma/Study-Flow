@@ -220,10 +220,16 @@
     </div>
   </div>
 
+  <script src="/js/supabase-config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>if (!window.supabase) document.write('<script src="/vendor/supabase/supabase.js"><\/script>');</script>
+  <script src="./js/supabaseClient.js"></script>
+  <script src="./js/auth.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', async () => {
       const urlParams = new URLSearchParams(window.location.search);
       const token = urlParams.get('token');
+      const hash = window.location.hash || '';
 
       const viewLoading = document.getElementById('view-loading');
       const viewSuccess = document.getElementById('view-success');
@@ -232,6 +238,38 @@
       const errorTitle = document.getElementById('error-title');
       const errorDesc = document.getElementById('error-desc');
       const resendEmailInput = document.getElementById('resend-email');
+
+      // Check for Supabase Auth redirect confirmation (via hash or session)
+      if (hash.includes('access_token=') || hash.includes('type=signup') || hash.includes('type=recovery')) {
+        try {
+          const client = typeof window.getSupabaseClient === 'function' ? await window.getSupabaseClient() : null;
+          if (client) {
+            const { data } = await client.auth.getSession();
+            if (data && data.session) {
+              viewLoading.style.display = 'none';
+              viewSuccess.style.display = 'block';
+              subtitleMsg.textContent = 'Your email is verified and your account is ready!';
+              return;
+            }
+          }
+        } catch (sbErr) {
+          console.warn('Supabase hash verification note:', sbErr);
+        }
+      }
+
+      // Check if user is already verified via Supabase session
+      try {
+        const client = typeof window.getSupabaseClient === 'function' ? await window.getSupabaseClient() : null;
+        if (client) {
+          const { data } = await client.auth.getSession();
+          if (data && data.session && data.session.user && (data.session.user.email_confirmed_at || data.session.user.confirmed_at)) {
+            viewLoading.style.display = 'none';
+            viewSuccess.style.display = 'block';
+            subtitleMsg.textContent = 'Your email has been verified!';
+            return;
+          }
+        }
+      } catch (e) {}
 
       if (!token) {
         viewLoading.style.display = 'none';
@@ -284,17 +322,13 @@
           resendFeedback.style.display = 'none';
 
           try {
-            const res = await fetch('/api/auth/resend-verification', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email }),
-            });
-            const result = await res.json();
+            // Use AuthManager for Supabase resend
+            const result = await AuthManager.resendVerification(email);
 
             btnResend.disabled = false;
             btnResend.textContent = 'Send Fresh Verification Email';
 
-            if (res.ok && result.success) {
+            if (result.success) {
               resendFeedback.className = 'msg-feedback success';
               resendFeedback.textContent = result.message || 'Verification email sent! Check your inbox.';
             } else {

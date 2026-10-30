@@ -11,14 +11,13 @@ async function connectDB() {
 
   try {
     const conn = await mongoose.connect(mongoURI, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 2000,
     });
     isConnected = true;
     console.log(`✓ MongoDB Connected: ${conn.connection.host}/${conn.connection.name}`);
     return conn.connection;
   } catch (error) {
-    console.error(`✗ MongoDB Connection Error: ${error.message}`);
-    console.warn("Please verify your MONGODB_URI in .env or ensure MongoDB is running.");
+    console.warn(`MongoDB offline notice (${error.message}). Continuing with local JSON storage.`);
     return null;
   }
 }
