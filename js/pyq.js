@@ -158,7 +158,7 @@ const PYQManager = {
       container.innerHTML = `
         <div class="empty-pane" style="padding:4rem 2rem;text-align:center;">
           <div class="empty-icon" style="font-size:3.5rem;margin-bottom:1rem;">📘</div>
-          <h3 style="font-size:1.4rem;font-weight:800;color:#ffffff;margin-bottom:.5rem;">Upload Your Course Syllabus First</h3>
+          <h3 style="font-size:1.4rem;font-weight:800;color:var(--text);margin-bottom:.5rem;">Upload Your Course Syllabus First</h3>
           <p style="font-size:.92rem;color:var(--text-secondary);max-width:580px;margin:0 auto 1.6rem;line-height:1.6;">
             To identify high-yield topics and calculate accurate syllabus coverage, StudyFlow requires your official course syllabus (e.g. <strong>Maths 4</strong>). Every question from past exam papers will then be matched directly to your specific syllabus units.
           </p>
@@ -174,7 +174,7 @@ const PYQManager = {
       container.innerHTML = `
         <div class="empty-pane" style="padding:4rem 2rem;text-align:center;">
           <div class="empty-icon" style="font-size:3.5rem;margin-bottom:1rem;">📑</div>
-          <h3 style="font-size:1.35rem;font-weight:800;color:#ffffff;margin-bottom:.5rem;">Previous-Year Question Paper Analyzer</h3>
+          <h3 style="font-size:1.35rem;font-weight:800;color:var(--text);margin-bottom:.5rem;">Previous-Year Question Paper Analyzer</h3>
           <p style="font-size:.9rem;color:var(--text-secondary);max-width:560px;margin:0 auto 1.75rem;line-height:1.6;">
             You have <strong>${subjectsWithSyllabus.length} enrolled course(s) with syllabus</strong>. Upload your past exam papers (PDFs) to extract questions, discover recurring high-yield topics, and detect syllabus gaps.
           </p>
@@ -203,8 +203,8 @@ const PYQManager = {
       container.innerHTML = `
         <div class="empty-pane" style="padding:3.5rem 2rem;text-align:center;">
           <div class="empty-icon" style="font-size:3rem;margin-bottom:.75rem;">📚</div>
-          <h3 style="font-size:1.3rem;font-weight:800;color:#ffffff;margin-bottom:.4rem;">Ready to Analyze Papers for "${this.escapeHtml(subName)}"</h3>
-          <div style="display:inline-flex;align-items:center;gap:.5rem;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);border-radius:20px;padding:.35rem .9rem;font-size:.82rem;color:#34d399;font-weight:600;margin-bottom:1.2rem;">
+          <h3 style="font-size:1.3rem;font-weight:800;color:var(--text);margin-bottom:.4rem;">Ready to Analyze Papers for "${this.escapeHtml(subName)}"</h3>
+          <div style="display:inline-flex;align-items:center;gap:.5rem;background:#D1FAE5;border:1px solid #A7F3D0;border-radius:20px;padding:.35rem .9rem;font-size:.82rem;color:#065F46;font-weight:700;margin-bottom:1.2rem;">
             ✓ Official Syllabus Attached (${unitsCount} Units, ${topicsCount} Topics)
           </div>
           <p style="font-size:.88rem;color:var(--text-secondary);max-width:520px;margin:0 auto 1.5rem;line-height:1.5;">
@@ -219,7 +219,7 @@ const PYQManager = {
       container.innerHTML = `
         <div class="empty-pane" style="padding:3.5rem 2rem;text-align:center;">
           <div class="empty-icon" style="font-size:3rem;margin-bottom:.75rem;">⚠️</div>
-          <h3 style="font-size:1.3rem;font-weight:800;color:#ffffff;margin-bottom:.4rem;">Syllabus Required for "${this.escapeHtml(subName)}"</h3>
+          <h3 style="font-size:1.3rem;font-weight:800;color:var(--text);margin-bottom:.4rem;">Syllabus Required for "${this.escapeHtml(subName)}"</h3>
           <p style="font-size:.88rem;color:var(--text-secondary);max-width:520px;margin:0 auto 1.5rem;line-height:1.5;">
             Before analyzing previous-year question papers for <strong>${this.escapeHtml(subName)}</strong>, please upload its course syllabus. This ensures questions are accurately mapped to your curriculum.
           </p>
@@ -252,48 +252,55 @@ const PYQManager = {
       <div class="pyq-stats-row">
         <div class="pyq-stat-card">
           <div class="p-label">Analyzed Papers</div>
-          <div class="p-val" style="color:#a78bfa;">${papersCount}</div>
+          <div class="p-val" style="color:#7c3aed;">${papersCount}</div>
           <div class="p-sub">Years: ${this.escapeHtml(yearSpan)}</div>
         </div>
         <div class="pyq-stat-card">
           <div class="p-label">Total Questions</div>
-          <div class="p-val" style="color:#38bdf8;">${questionsCount}</div>
+          <div class="p-val" style="color:#0284c7;">${questionsCount}</div>
           <div class="p-sub">Extracted &amp; Classified</div>
         </div>
         <div class="pyq-stat-card">
           <div class="p-label">High-Yield Topics</div>
-          <div class="p-val" style="color:#f87171;">${highYieldCount}</div>
+          <div class="p-val" style="color:#dc2626;">${highYieldCount}</div>
           <div class="p-sub">Frequent recurring exam focus</div>
         </div>
         <div class="pyq-stat-card">
           <div class="p-label">Syllabus Coverage</div>
-          <div class="p-val" style="color:#34d399;">${coveragePct}%</div>
+          <div class="p-val" style="color:#059669;">${coveragePct}%</div>
           <div class="p-sub">${uncoveredCount} topics never examined</div>
         </div>
       </div>
 
       <!-- OFFICIAL SYLLABUS LINKAGE BANNER -->
-      <div style="background:rgba(99,102,241,0.12);border:1px solid rgba(99,102,241,0.35);border-radius:12px;padding:.85rem 1.25rem;margin-bottom:1.3rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;">
-        <div style="display:flex;align-items:center;gap:.65rem;">
-          <span style="font-size:1.35rem;">📘</span>
+      <div style="background:#EEF2FF;border:1px solid #C7D2FE;border-radius:12px;padding:.85rem 1.25rem;margin-bottom:1.3rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;box-shadow:0 1px 3px rgba(67,56,202,0.06);">
+        <div style="display:flex;align-items:center;gap:.75rem;">
+          <span style="font-size:1.35rem;flex-shrink:0;">📘</span>
           <div>
-            <div style="font-size:.88rem;font-weight:700;color:#e0e7ff;">Matched Against Official Syllabus: ${this.escapeHtml(a.subjectName)}</div>
-            <div style="font-size:.78rem;color:#a5b4fc;">
-              ${a.syllabusCoverage?.totalSyllabusTopics || (a.topicPriorities || []).length} Curriculum Topics • ${coveragePct}% Examined in PYQs
+            <div style="font-size:.92rem;font-weight:800;color:#1E1B4B;display:flex;align-items:center;gap:.4rem;">
+              Matched Against Official Syllabus: <span style="color:#4338CA;">${this.escapeHtml(a.subjectName)}</span>
+            </div>
+            <div style="font-size:.8rem;color:#475569;font-weight:500;margin-top:.15rem;">
+              ${a.syllabusCoverage?.totalSyllabusTopics || (a.topicPriorities || []).length} Curriculum Topics • <strong style="color:#3730A3;">${coveragePct}% Examined in PYQs</strong>
             </div>
           </div>
         </div>
-        <div style="font-size:.8rem;color:#34d399;font-weight:600;display:flex;align-items:center;gap:.4rem;">
-          <span>✓</span> ${questionsCount} PYQ questions mapped to syllabus
+        <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;">
+          <div style="font-size:.82rem;color:#065F46;font-weight:700;display:inline-flex;align-items:center;gap:.4rem;background:#D1FAE5;border:1px solid #A7F3D0;padding:.35rem .75rem;border-radius:999px;">
+            <span>✓</span> ${questionsCount} PYQ questions mapped to syllabus
+          </div>
+          <button type="button" onclick="PYQManager.deleteSubjectAnalysis('${a.subjectId}')" style="background:#FEE2E2;border:1px solid #FECACA;color:#DC2626;font-size:.78rem;font-weight:700;padding:.35rem .75rem;border-radius:8px;cursor:pointer;" title="Delete this entire subject analysis">
+            🗑️ Delete Analysis
+          </button>
         </div>
       </div>
 
       <!-- ADVISORY BANNER IF SINGLE PAPER -->
       ${papersCount === 1 ? `
-        <div style="background:rgba(245, 158, 11, 0.12);border:1px solid rgba(245, 158, 11, 0.35);border-radius:12px;padding:.85rem 1.25rem;margin-bottom:1.4rem;display:flex;align-items:center;gap:.75rem;">
-          <span style="font-size:1.25rem;">⚠️</span>
-          <div style="font-size:.84rem;color:#fde68a;">
-            <strong>Single Paper Advisory:</strong> You have uploaded 1 question paper (${a.papers[0]?.year || 'Current'}). Multi-year historical recurrence cannot be established reliably until papers from multiple exam years are uploaded.
+        <div style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:.85rem 1.25rem;margin-bottom:1.4rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 1px 3px rgba(245,158,11,0.06);">
+          <span style="font-size:1.3rem;flex-shrink:0;">⚠️</span>
+          <div style="font-size:.86rem;color:#92400E;line-height:1.5;">
+            <strong style="color:#78350F;font-weight:800;">Single Paper Advisory:</strong> You have uploaded 1 question paper (${a.papers[0]?.year || 'Current'}). Multi-year historical recurrence cannot be established reliably until papers from multiple exam years are uploaded.
           </div>
         </div>
       ` : ''}
@@ -407,13 +414,13 @@ const PYQManager = {
             ${t.hasLongAnswer ? `
               <div class="pyq-metric">
                 <span class="pyq-metric-label">Question Type</span>
-                <span class="pyq-metric-value" style="color:#f87171;">⭐ Long Answer (High Marks)</span>
+                <span class="pyq-metric-value" style="color:#dc2626;font-weight:700;">⭐ Long Answer (High Marks)</span>
               </div>
             ` : ''}
             ${t.isExplicitSyllabusTopic ? `
               <div class="pyq-metric">
                 <span class="pyq-metric-label">Syllabus Match</span>
-                <span class="pyq-metric-value" style="color:#34d399;">✓ Explicit Syllabus Topic</span>
+                <span class="pyq-metric-value" style="color:#059669;font-weight:700;">✓ Explicit Syllabus Topic</span>
               </div>
             ` : ''}
           </div>
@@ -428,7 +435,7 @@ const PYQManager = {
     return `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.2rem;flex-wrap:wrap;gap:.75rem;">
         <div>
-          <h3 style="font-size:1.15rem;font-weight:700;color:#ffffff;">Evidence-Based Study Priorities</h3>
+          <h3 style="font-size:1.15rem;font-weight:700;color:var(--text);">Evidence-Based Study Priorities</h3>
           <p style="font-size:.82rem;color:var(--muted);">Topics ranked objectively across all accumulated exam years (${this.activeAnalysis?.papers?.map(p => p.year).filter(Boolean).join(', ') || 'Uploaded Papers'}).</p>
         </div>
         <div style="display:flex;align-items:center;gap:.75rem;flex-wrap:wrap;">
@@ -503,11 +510,11 @@ const PYQManager = {
     const years = [...new Set(papers.map(p => p.year))].sort();
 
     return `
-      <div style="background:rgba(139, 92, 246, 0.12);border:1px solid rgba(139, 92, 246, 0.35);border-radius:14px;padding:1.1rem 1.4rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;">
+      <div style="background:#F5F3FF;border:1px solid #DDD6FE;border-radius:14px;padding:1.1rem 1.4rem;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem;box-shadow:0 1px 3px rgba(124,58,237,0.06);">
         <div style="display:flex;align-items:center;gap:.75rem;">
-          <span style="font-size:1.6rem;">📈</span>
+          <span style="font-size:1.6rem;flex-shrink:0;">📈</span>
           <div>
-            <h4 style="font-size:1rem;font-weight:700;color:#ffffff;margin-bottom:.2rem;">Multi-Year Recurrence Evidence (${papers.length} Papers Accumulated)</h4>
+            <h4 style="font-size:1rem;font-weight:800;color:#4C1D95;margin-bottom:.2rem;">Multi-Year Recurrence Evidence (${papers.length} Papers Accumulated)</h4>
             <p style="font-size:.82rem;color:var(--text-secondary);line-height:1.45;">
               Topic priority scores increase when questions repeat across multiple exam years (${years.join(', ')}). Uploading more past papers sharpens the prediction of your upcoming exam.
             </p>
@@ -533,21 +540,21 @@ const PYQManager = {
           return `
             <div class="pyq-chart-box" style="margin-bottom:0;position:relative;">
               <div class="pyq-chart-title" style="display:flex;justify-content:space-between;align-items:center;">
-                <span style="font-weight:800;color:#ffffff;">📅 Year ${this.escapeHtml(yr)} Examination</span>
+                <span style="font-weight:800;color:var(--text);">📅 Year ${this.escapeHtml(yr)} Examination</span>
                 <span class="pyq-tag pyq-tag-year">${yrQuestions.length} Questions</span>
               </div>
               <div style="font-size:.78rem;color:var(--muted);margin-bottom:.85rem;display:flex;justify-content:space-between;align-items:center;">
                 <span style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px;" title="${this.escapeHtml(paper.fileName)}">
                   Source: <strong>${this.escapeHtml(paper.fileName || 'Question Paper PDF')}</strong>
                 </span>
-                <button type="button" onclick="PYQManager.deletePaper('${paper.id}', '${yr}')" style="background:none;border:none;color:#f87171;font-size:.76rem;cursor:pointer;padding:.2rem .4rem;border-radius:4px;" title="Remove this year's paper">
+                <button type="button" onclick="PYQManager.deletePaper('${paper.id}', '${yr}')" style="background:none;border:none;color:#ef4444;font-size:.76rem;cursor:pointer;padding:.2rem .4rem;border-radius:4px;font-weight:600;" title="Remove this year's paper">
                   🗑️ Remove
                 </button>
               </div>
               <div style="display:flex;flex-direction:column;gap:.6rem;">
                 ${Array.from(yrTopicsMap.entries()).map(([top, count]) => `
-                  <div style="display:flex;justify-content:space-between;align-items:center;padding:.45rem .65rem;background:rgba(255, 255, 255, 0.03);border-radius:8px;border:1px solid rgba(255, 255, 255, 0.05);font-size:.84rem;">
-                    <span style="color:#ffffff;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${this.escapeHtml(top)}</span>
+                  <div style="display:flex;justify-content:space-between;align-items:center;padding:.45rem .65rem;background:var(--surface2);border-radius:8px;border:1px solid var(--border);font-size:.84rem;">
+                    <span style="color:var(--text);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px;">${this.escapeHtml(top)}</span>
                     <span style="color:var(--accent2);font-weight:700;">${count} Qs</span>
                   </div>
                 `).join('')}
@@ -616,7 +623,7 @@ const PYQManager = {
 
           <div class="pyq-q-footer">
             <span>Unit: <strong>${this.escapeHtml(q.detectedUnit || 'General')}</strong></span>
-            <span>Confidence: <strong style="text-transform:capitalize;color:${q.confidence === 'high' ? '#34d399' : '#fbbf24'};">${q.confidence || 'medium'}</strong></span>
+            <span>Confidence: <strong style="text-transform:capitalize;color:${q.confidence === 'high' ? '#059669' : '#d97706'};">${q.confidence || 'medium'}</strong></span>
           </div>
         </div>
       `;
@@ -681,10 +688,10 @@ const PYQManager = {
     const uncovered = coverage.uncoveredTopics || [];
 
     return `
-      <div style="background:rgba(139, 92, 246, 0.12);border:1px solid rgba(139, 92, 246, 0.35);border-radius:14px;padding:1.2rem 1.4rem;margin-bottom:1.5rem;display:flex;align-items:flex-start;gap:.9rem;">
-        <span style="font-size:1.5rem;">💡</span>
+      <div style="background:#F5F3FF;border:1px solid #DDD6FE;border-radius:14px;padding:1.2rem 1.4rem;margin-bottom:1.5rem;display:flex;align-items:flex-start;gap:.9rem;box-shadow:0 1px 3px rgba(124,58,237,0.06);">
+        <span style="font-size:1.5rem;flex-shrink:0;">💡</span>
         <div>
-          <h4 style="font-size:1rem;font-weight:700;color:#ffffff;margin-bottom:.3rem;">Syllabus Coverage Gap Insight</h4>
+          <h4 style="font-size:1rem;font-weight:800;color:#4C1D95;margin-bottom:.3rem;">Syllabus Coverage Gap Insight</h4>
           <p style="font-size:.84rem;color:var(--text-secondary);line-height:1.45;">
             While high-yield recurring topics deserve priority study time, <strong>uncovered topics must NOT be ignored</strong>. University question committees frequently introduce fresh questions from previously unexamined units to balance exams.
           </p>
@@ -695,13 +702,13 @@ const PYQManager = {
         <!-- COVERED TOPICS -->
         <div class="pyq-coverage-col">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-            <h4 style="font-size:1.05rem;font-weight:700;color:#34d399;">✓ Examined in Past Papers (${covered.length})</h4>
+            <h4 style="font-size:1.05rem;font-weight:700;color:#047857;">✓ Examined in Past Papers (${covered.length})</h4>
             <span class="p-pill p-pill-low">${coverage.coveragePercentage}% of Syllabus</span>
           </div>
           <div style="display:flex;flex-direction:column;gap:.6rem;">
             ${covered.length ? covered.map(c => `
               <div class="pyq-cov-item pyq-cov-covered">
-                <div style="font-size:.92rem;font-weight:700;color:#ffffff;">${this.escapeHtml(c.topicName)}</div>
+                <div style="font-size:.92rem;font-weight:700;color:var(--text);">${this.escapeHtml(c.topicName)}</div>
                 <div style="font-size:.78rem;color:var(--muted);margin-top:.2rem;">
                   ${this.escapeHtml(c.unit)} • Appeared <strong>${c.appearances} time${c.appearances > 1 ? 's' : ''}</strong> across ${c.paperCount} paper${c.paperCount > 1 ? 's' : ''}
                 </div>
@@ -713,21 +720,21 @@ const PYQManager = {
         <!-- UNCOVERED TOPICS -->
         <div class="pyq-coverage-col">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-            <h4 style="font-size:1.05rem;font-weight:700;color:#fbbf24;">⚠️ Uncovered Syllabus Topics (${uncovered.length})</h4>
+            <h4 style="font-size:1.05rem;font-weight:700;color:#B45309;">⚠️ Uncovered Syllabus Topics (${uncovered.length})</h4>
             <span class="p-pill p-pill-medium">Requires Revision</span>
           </div>
           <div style="display:flex;flex-direction:column;gap:.6rem;">
             ${uncovered.length ? uncovered.map(u => `
               <div class="pyq-cov-item pyq-cov-uncovered">
-                <div style="font-size:.92rem;font-weight:700;color:#ffffff;">${this.escapeHtml(u.topicName)}</div>
+                <div style="font-size:.92rem;font-weight:700;color:var(--text);">${this.escapeHtml(u.topicName)}</div>
                 <div style="font-size:.78rem;color:var(--muted);margin-top:.2rem;">
-                  ${this.escapeHtml(u.unit)} • Difficulty: <span style="text-transform:capitalize;color:#cbd5e1;">${u.difficulty || 'medium'}</span>
+                  ${this.escapeHtml(u.unit)} • Difficulty: <span style="text-transform:capitalize;color:var(--text-secondary);font-weight:600;">${u.difficulty || 'medium'}</span>
                 </div>
-                <div style="font-size:.76rem;color:#fde68a;margin-top:.35rem;">
+                <div style="font-size:.76rem;color:#92400E;margin-top:.35rem;font-weight:500;">
                   ${this.escapeHtml(u.reason)}
                 </div>
               </div>
-            `).join('') : '<p style="color:#34d399;font-size:.85rem;">100% of syllabus topics have appeared in uploaded papers!</p>'}
+            `).join('') : '<p style="color:#047857;font-size:.85rem;font-weight:600;">100% of syllabus topics have appeared in uploaded papers!</p>'}
           </div>
         </div>
       </div>
@@ -787,20 +794,20 @@ const PYQManager = {
     if (!sub) {
       if (statusBox) {
         statusBox.innerHTML = `
-          <div id="pyq-syllabus-card-wrapper" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:10px;padding:.75rem 1rem;transition:all .2s ease;">
+          <div id="pyq-syllabus-card-wrapper" style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:.75rem 1rem;transition:all .2s ease;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;">
               <div style="display:flex;align-items:center;gap:.6rem;">
                 <span id="pyq-syllabus-icon" style="font-size:1.3rem;">⚠️</span>
                 <div>
-                  <div id="pyq-syllabus-title" style="font-size:.84rem;font-weight:700;color:#fbbf24;">Syllabus Required Before PYQ Analysis</div>
-                  <div id="pyq-syllabus-subtitle" style="font-size:.76rem;color:#fde68a;">Please select an enrolled subject with an uploaded syllabus, or upload your course syllabus first.</div>
+                  <div id="pyq-syllabus-title" style="font-size:.86rem;font-weight:800;color:#92400E;">Syllabus Required Before PYQ Analysis</div>
+                  <div id="pyq-syllabus-subtitle" style="font-size:.78rem;color:#78350F;margin-top:.15rem;">Please select an enrolled subject with an uploaded syllabus, or upload your course syllabus first.</div>
                 </div>
               </div>
               <button type="button" onclick="window.openUploadModal ? window.openUploadModal() : openUploadModal()" class="btn-sm" style="background:#f59e0b;border:none;color:#000;font-size:.76rem;font-weight:700;padding:.4rem .75rem;border-radius:6px;cursor:pointer;white-space:nowrap;">
                 📤 Upload Syllabus
               </button>
             </div>
-            <label style="display:flex;align-items:flex-start;gap:.6rem;cursor:pointer;margin-top:.65rem;padding-top:.55rem;border-top:1px solid rgba(245,158,11,0.25);font-size:.78rem;color:#fde68a;">
+            <label style="display:flex;align-items:flex-start;gap:.6rem;cursor:pointer;margin-top:.65rem;padding-top:.55rem;border-top:1px solid rgba(245,158,11,0.25);font-size:.78rem;color:#92400E;">
               <input type="checkbox" id="pyq-syllabus-confirmed-checkbox" onchange="PYQManager.onSyllabusCheckboxToggle(this.checked)" style="accent-color:#10b981;cursor:pointer;width:17px;height:17px;margin-top:1px;flex-shrink:0;">
               <span id="pyq-syllabus-checkbox-text"><strong>☑️ I have uploaded the syllabus / Confirm syllabus is available</strong><br><span style="font-size:.72rem;opacity:0.9;">Tick this box to allow question extraction and calculate topic priorities</span></span>
             </label>
@@ -823,24 +830,24 @@ const PYQManager = {
 
       if (statusBox) {
         statusBox.innerHTML = `
-          <div id="pyq-syllabus-card-wrapper" style="background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.35);border-radius:10px;padding:.75rem 1rem;transition:all .2s ease;">
+          <div id="pyq-syllabus-card-wrapper" style="background:#D1FAE5;border:1px solid #A7F3D0;border-radius:10px;padding:.75rem 1rem;transition:all .2s ease;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;">
               <div style="display:flex;align-items:center;gap:.6rem;">
                 <span id="pyq-syllabus-icon" style="font-size:1.3rem;">✅</span>
                 <div>
-                  <div id="pyq-syllabus-title" style="font-size:.86rem;font-weight:700;color:#34d399;display:flex;align-items:center;gap:.4rem;">
+                  <div id="pyq-syllabus-title" style="font-size:.86rem;font-weight:800;color:#065F46;display:flex;align-items:center;gap:.4rem;">
                     <span>✓</span> Official Syllabus Linked: ${this.escapeHtml(sub.name)}
                   </div>
-                  <div id="pyq-syllabus-subtitle" style="font-size:.76rem;color:var(--muted);">${sub.units.length} Units • ${topicsCount} Curriculum Topics ready for PYQ question mapping</div>
+                  <div id="pyq-syllabus-subtitle" style="font-size:.78rem;color:#047857;margin-top:.15rem;">${sub.units.length} Units • ${topicsCount} Curriculum Topics ready for PYQ question mapping</div>
                 </div>
               </div>
-              <button type="button" onclick="PYQManager.toggleSyllabusPreview()" class="btn-sm" style="background:rgba(255,255,255,0.08);border:1px solid var(--border);color:#f1f5f9;font-size:.75rem;padding:.35rem .65rem;border-radius:6px;cursor:pointer;white-space:nowrap;">
+              <button type="button" onclick="PYQManager.toggleSyllabusPreview()" class="btn-sm" style="background:var(--surface);border:1px solid var(--border);color:var(--text);font-size:.75rem;padding:.35rem .65rem;border-radius:6px;cursor:pointer;white-space:nowrap;font-weight:600;">
                 👁️ View Units (${sub.units.length})
               </button>
             </div>
-            <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;margin-top:.6rem;padding-top:.5rem;border-top:1px solid rgba(255,255,255,0.08);font-size:.78rem;color:#a7f3d0;">
+            <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;margin-top:.6rem;padding-top:.5rem;border-top:1px solid rgba(16,185,129,0.25);font-size:.78rem;color:#065F46;">
               <input type="checkbox" id="pyq-syllabus-confirmed-checkbox" checked onchange="PYQManager.onSyllabusCheckboxToggle(this.checked)" style="accent-color:#10b981;cursor:pointer;width:17px;height:17px;flex-shrink:0;">
-              <span id="pyq-syllabus-checkbox-text"><strong style="color:#34d399;">✓ Syllabus Uploaded & Verified</strong> — Extraction and topic priorities enabled</span>
+              <span id="pyq-syllabus-checkbox-text"><strong style="color:#065F46;">✓ Syllabus Uploaded &amp; Verified</strong> — Extraction and topic priorities enabled</span>
             </label>
           </div>
         `;
@@ -848,13 +855,13 @@ const PYQManager = {
 
       if (previewBox) {
         previewBox.innerHTML = `
-          <div style="font-weight:700;color:#34d399;margin-bottom:.5rem;">Curriculum Outline for ${this.escapeHtml(sub.name)}:</div>
+          <div style="font-weight:700;color:#065F46;margin-bottom:.5rem;">Curriculum Outline for ${this.escapeHtml(sub.name)}:</div>
           ${sub.units.map((u, ui) => {
             const uTitle = u.title || `Unit ${u.unitNumber || ui + 1}`;
             const tList = (u.topics || []).map(t => typeof t === 'string' ? t : (t.title || t.name || '')).filter(Boolean);
             return `
-              <div style="margin-bottom:.4rem;padding-bottom:.35rem;border-bottom:1px solid rgba(255,255,255,0.05);">
-                <strong style="color:#ffffff;">Unit ${u.unitNumber || ui + 1}: ${this.escapeHtml(uTitle)}</strong>
+              <div style="margin-bottom:.4rem;padding-bottom:.35rem;border-bottom:1px solid var(--border);">
+                <strong style="color:var(--text);">Unit ${u.unitNumber || ui + 1}: ${this.escapeHtml(uTitle)}</strong>
                 <div style="color:var(--muted);margin-top:.15rem;font-size:.75rem;">Topics: ${this.escapeHtml(tList.join(', ') || 'All core concepts')}</div>
               </div>
             `;
@@ -865,20 +872,20 @@ const PYQManager = {
     } else {
       if (statusBox) {
         statusBox.innerHTML = `
-          <div id="pyq-syllabus-card-wrapper" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:10px;padding:.75rem 1rem;transition:all .2s ease;">
+          <div id="pyq-syllabus-card-wrapper" style="background:#FFFBEB;border:1px solid #FDE68A;border-radius:10px;padding:.75rem 1rem;transition:all .2s ease;">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:.75rem;">
               <div style="display:flex;align-items:center;gap:.6rem;">
                 <span id="pyq-syllabus-icon" style="font-size:1.3rem;">⚠️</span>
                 <div>
-                  <div id="pyq-syllabus-title" style="font-size:.85rem;font-weight:700;color:#fbbf24;">Syllabus Required Before PYQ Analysis</div>
-                  <div id="pyq-syllabus-subtitle" style="font-size:.76rem;color:#fde68a;">Please select an enrolled subject with an uploaded syllabus, or upload your course syllabus first.</div>
+                  <div id="pyq-syllabus-title" style="font-size:.86rem;font-weight:800;color:#92400E;">Syllabus Required Before PYQ Analysis</div>
+                  <div id="pyq-syllabus-subtitle" style="font-size:.78rem;color:#78350F;margin-top:.15rem;">Please select an enrolled subject with an uploaded syllabus, or upload your course syllabus first.</div>
                 </div>
               </div>
               <button type="button" onclick="window.openUploadModal ? window.openUploadModal() : openUploadModal()" class="btn-sm" style="background:#f59e0b;border:none;color:#000;font-size:.76rem;font-weight:700;padding:.4rem .75rem;border-radius:6px;cursor:pointer;white-space:nowrap;">
                 📤 Upload Syllabus
               </button>
             </div>
-            <label style="display:flex;align-items:flex-start;gap:.6rem;cursor:pointer;margin-top:.65rem;padding-top:.55rem;border-top:1px solid rgba(245,158,11,0.25);font-size:.78rem;color:#fde68a;">
+            <label style="display:flex;align-items:flex-start;gap:.6rem;cursor:pointer;margin-top:.65rem;padding-top:.55rem;border-top:1px solid rgba(245,158,11,0.25);font-size:.78rem;color:#92400E;">
               <input type="checkbox" id="pyq-syllabus-confirmed-checkbox" onchange="PYQManager.onSyllabusCheckboxToggle(this.checked)" style="accent-color:#10b981;cursor:pointer;width:17px;height:17px;margin-top:1px;flex-shrink:0;">
               <span id="pyq-syllabus-checkbox-text"><strong>☑️ I have uploaded the syllabus / Confirm syllabus is available</strong><br><span style="font-size:.72rem;opacity:0.9;">Tick this box to allow question extraction and calculate topic priorities</span></span>
             </label>
@@ -918,18 +925,18 @@ const PYQManager = {
 
     if (isChecked) {
       if (card) {
-        card.style.background = 'rgba(16,185,129,0.14)';
-        card.style.borderColor = 'rgba(16,185,129,0.45)';
+        card.style.background = '#D1FAE5';
+        card.style.borderColor = '#A7F3D0';
       }
       if (icon) icon.textContent = '✅';
       if (title) {
-        title.innerHTML = '<span style="color:#34d399;display:flex;align-items:center;gap:.35rem;"><span>✓</span> Syllabus Confirmed &amp; Ready for Analysis</span>';
+        title.innerHTML = '<span style="color:#065F46;font-weight:800;display:flex;align-items:center;gap:.35rem;"><span>✓</span> Syllabus Confirmed &amp; Ready for Analysis</span>';
       }
       if (subtitle) {
-        subtitle.innerHTML = '<span style="color:#a7f3d0;">Syllabus requirement confirmed! You can now extract questions and calculate topic priorities.</span>';
+        subtitle.innerHTML = '<span style="color:#047857;font-weight:500;">Syllabus requirement confirmed! You can now extract questions and calculate topic priorities.</span>';
       }
       if (checkText) {
-        checkText.innerHTML = '<strong style="color:#34d399;">✓ Syllabus Uploaded &amp; Confirmed</strong><br><span style="font-size:.72rem;color:#a7f3d0;">Extraction &amp; topic priority calculation enabled</span>';
+        checkText.innerHTML = '<strong style="color:#065F46;">✓ Syllabus Uploaded &amp; Confirmed</strong><br><span style="font-size:.72rem;color:#047857;">Extraction &amp; topic priority calculation enabled</span>';
       }
       if (errBox) errBox.style.display = 'none';
     } else {
@@ -941,33 +948,33 @@ const PYQManager = {
 
       if (hasSyl) {
         if (card) {
-          card.style.background = 'rgba(16,185,129,0.12)';
-          card.style.borderColor = 'rgba(16,185,129,0.35)';
+          card.style.background = '#D1FAE5';
+          card.style.borderColor = '#A7F3D0';
         }
         if (icon) icon.textContent = '📘';
         if (title) {
-          title.innerHTML = `<span style="color:#34d399;">Official Syllabus Linked: ${this.escapeHtml(sub.name)}</span>`;
+          title.innerHTML = `<span style="color:#065F46;font-weight:800;">Official Syllabus Linked: ${this.escapeHtml(sub.name)}</span>`;
         }
         if (subtitle) {
-          subtitle.innerHTML = `<span style="color:var(--muted);">${sub.units.length} Units • Ready for PYQ question mapping</span>`;
+          subtitle.innerHTML = `<span style="color:#047857;">${sub.units.length} Units • Ready for PYQ question mapping</span>`;
         }
         if (checkText) {
-          checkText.innerHTML = '<span>Tick box to confirm syllabus verification</span>';
+          checkText.innerHTML = '<span style="color:#065F46;">Tick box to confirm syllabus verification</span>';
         }
       } else {
         if (card) {
-          card.style.background = 'rgba(245,158,11,0.12)';
-          card.style.borderColor = 'rgba(245,158,11,0.35)';
+          card.style.background = '#FFFBEB';
+          card.style.borderColor = '#FDE68A';
         }
         if (icon) icon.textContent = '⚠️';
         if (title) {
-          title.innerHTML = `<span style="color:#fbbf24;">Syllabus Required Before PYQ Analysis</span>`;
+          title.innerHTML = `<span style="color:#92400E;font-weight:800;">Syllabus Required Before PYQ Analysis</span>`;
         }
         if (subtitle) {
-          subtitle.innerHTML = `<span style="color:#fde68a;">Please select an enrolled subject with an uploaded syllabus, or upload your course syllabus first.</span>`;
+          subtitle.innerHTML = `<span style="color:#78350F;">Please select an enrolled subject with an uploaded syllabus, or upload your course syllabus first.</span>`;
         }
         if (checkText) {
-          checkText.innerHTML = '<strong>☑️ I have uploaded the syllabus / Confirm syllabus is available</strong><br><span style="font-size:.72rem;opacity:0.9;">Tick this box to allow question extraction and calculate topic priorities</span>';
+          checkText.innerHTML = '<strong style="color:#92400E;">☑️ I have uploaded the syllabus / Confirm syllabus is available</strong><br><span style="font-size:.72rem;color:#78350F;">Tick this box to allow question extraction and calculate topic priorities</span>';
         }
       }
     }
@@ -1033,7 +1040,7 @@ const PYQManager = {
         <div style="display:flex;align-items:center;gap:.6rem;">
           <label style="font-size:.76rem;color:var(--muted);">Exam Year:</label>
           <input type="text" class="pyq-year-input" value="${this.escapeHtml(item.year)}" oninput="PYQManager.updateFileYear('${item.id}', this.value)" placeholder="e.g. 2024">
-          <button type="button" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:1rem;" onclick="PYQManager.removeUploadedFile('${item.id}')" title="Remove Paper">✕</button>
+          <button type="button" style="background:none;border:none;color:#dc2626;cursor:pointer;font-size:1rem;font-weight:700;" onclick="PYQManager.removeUploadedFile('${item.id}')" title="Remove Paper">✕</button>
         </div>
       </div>
     `).join('');
@@ -1212,6 +1219,32 @@ const PYQManager = {
     }
   },
 
+  async deleteSubjectAnalysis(subjectId) {
+    const targetId = subjectId || this.activeSubjectId;
+    if (!targetId) return;
+    if (!confirm('Are you sure you want to completely remove this PYQ analysis and its extracted questions?')) {
+      return;
+    }
+
+    try {
+      const res = await this.fetchAuth(`/api/pyq/subject/${encodeURIComponent(targetId)}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        window.showToast?.(data.message || 'PYQ analysis removed.', 'info');
+        this.activeSubjectId = null;
+        this.activeAnalysis = null;
+        await this.loadSubjectsAndHistory();
+      } else {
+        alert(data.message || 'Could not delete PYQ analysis.');
+      }
+    } catch (e) {
+      alert('Error deleting PYQ analysis: ' + e.message);
+    }
+  },
+
   // ─── RECLASSIFICATION MODAL ─────────────────────────────────
   openReclassifyModal(questionId) {
     if (!this.activeAnalysis) return;
@@ -1293,9 +1326,9 @@ const PYQManager = {
     // Render topics review list
     const topicsListEl = document.getElementById('plan-modal-topics-list');
     topicsListEl.innerHTML = (a.topicPriorities || []).map((t, idx) => `
-      <div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;background:rgba(255, 255, 255, 0.03);border-radius:8px;border:1px solid var(--border);margin-bottom:.45rem;">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:.6rem .85rem;background:var(--surface2);border-radius:8px;border:1px solid var(--border);margin-bottom:.45rem;">
         <div>
-          <span style="font-weight:700;color:#ffffff;font-size:.88rem;">${this.escapeHtml(t.topicName)}</span>
+          <span style="font-weight:700;color:var(--text);font-size:.88rem;">${this.escapeHtml(t.topicName)}</span>
           <span style="font-size:.74rem;color:var(--muted);margin-left:.5rem;">(${t.paperCount}/${t.totalPaperCount} Papers)</span>
         </div>
         <span class="p-pill ${t.priorityLevel === 'High' ? 'p-pill-high' : (t.priorityLevel === 'Medium' ? 'p-pill-medium' : 'p-pill-low')}">

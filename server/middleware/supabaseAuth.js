@@ -1,84 +1,136 @@
-const { supabase, createScopedClient, isConfigured } = require("../config/supabase");
+const {
+  supabase,
+  createScopedClient,
+  isConfigured,
+} = require("../config/supabase");
 
-/**
- * Middleware that authenticates requests using Supabase Auth JWTs.
- *
- * Security & RLS enforcement:
- * 1. Reads the Bearer token from the Authorization header.
- * 2. Verifies it against Supabase Auth (`supabase.auth.getUser`).
- * 3. Rejects invalid or expired tokens with HTTP 401.
- * 4. Makes the verified user ID available to protected routes (req.userId, req.user).
- * 5. Instantiates a user-scoped Supabase client (req.supabaseClient) forwarding the JWT,
- *    ensuring PostgreSQL Row Level Security (RLS) policies (e.g. auth.uid() = user_id)
- *    are strictly enforced at the database level.
- */
+// =====================================================
+// SUPABASE AUTHENTICATION MIDDLEWARE
+// =====================================================
+
 async function requireSupabaseAuth(req, res, next) {
   try {
-    if (!isConfigured) {
+    // 1. Check configuration
+    if (!isConfigured || !supabase) {
       return res.status(500).json({
         success: false,
-        message: "Supabase credentials are not configured on the server. Check SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY in .env.",
+        message: "Supabase is not configured. Check your .env file.",
       });
     }
 
-    // Extract Bearer token from Authorization header or custom header
+    // 2. Extract access token
     let token = null;
-    const authHeader = req.headers && (req.headers.authorization || req.headers.Authorization);
+
+    const authHeader = req.headers.authorization;
 
     if (authHeader && typeof authHeader === "string") {
       const match = authHeader.match(/^Bearer\s+(.+)$/i);
-      token = match ? match[1].trim() : authHeader.trim();
-    } else if (req.headers && req.headers["x-auth-token"]) {
+
+      if (match) {
+        token = match[1].trim();
+      }
+    }
+
+    if (!token && req.headers["x-auth-token"]) {
       token = String(req.headers["x-auth-token"]).trim();
-    } else if (req.cookies && req.cookies["sb_access_token"]) {
-      token = String(req.cookies["sb_access_token"]).trim();
+    }
+
+    if (!token && req.cookies?.sb_access_token) {
+      token = String(req.cookies.sb_access_token).trim();
     }
 
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: "Authentication required. Please provide a valid Supabase Auth Bearer token in the Authorization header.",
+        message: "Authentication required. Please log in again.",
       });
     }
 
-    // Verify token with Supabase Auth
+    // 3. Verify Supabase access token
     const { data, error } = await supabase.auth.getUser(token);
 
-    if (error || !data || !data.user) {
+    if (error || !data?.user) {
       return res.status(401).json({
         success: false,
-        message: "Invalid, expired, or unverified Supabase authentication token.",
-        details: error ? error.message : undefined,
+        message: "Invalid or expired Supabase access token.",
       });
     }
 
     const sbUser = data.user;
+
+    if (!sbUser.id) {
+      return res.status(401).json({
+        success: false,
+        message: "Authenticated user ID is missing.",
+      });
+    }
+
+    // 4. Create authenticated, user-scoped Supabase client.
+    // IMPORTANT: createScopedClient is ASYNC, so await is required.
+
+    const scopedClient = await createScopedClient(token);
+
+    // 5. Validate actual Supabase client
+    if (
+      !scopedClient ||
+      typeof scopedClient.from !== "function" ||
+      !scopedClient.auth
+    ) {
+      console.error("Invalid Supabase client returned.");
+
+      return res.status(500).json({
+        success: false,
+        message: "Supabase client initialization failed.",
+        code: "INVALID_SUPABASE_CLIENT",
+      });
+    }
+
+    // 6. Get user information
     const userName =
       sbUser.user_metadata?.name ||
       sbUser.user_metadata?.full_name ||
-      (sbUser.email ? sbUser.email.split("@")[0] : "Student");
+      sbUser.email?.split("@")[0] ||
+      "Student";
 
-    // Attach verified user and scoped client to request
+    const isEmailVerified = Boolean(
+      sbUser.email_confirmed_at || sbUser.confirmed_at,
+    );
+
+    // 7. Attach authenticated user to request
     req.supabaseUser = sbUser;
-    req.supabaseClient = createScopedClient(token);
+
+    req.supabaseClient = scopedClient;
+
+    req.supabase = scopedClient;
+
     req.userId = sbUser.id;
+
+    req.supabaseUserId = sbUser.id;
+
     req.user = {
       id: sbUser.id,
       _id: sbUser.id,
-      email: sbUser.email,
+      email: sbUser.email || null,
       name: userName,
-      isVerified: Boolean(sbUser.email_confirmed_at || sbUser.confirmed_at || true),
+      isVerified: isEmailVerified,
     };
 
-    next();
+    // 8. Continue to route
+    return next();
   } catch (error) {
     console.error("Supabase authentication middleware error:", error.message);
+
     return res.status(500).json({
       success: false,
       message: "Internal server error during authentication.",
+      code: "SUPABASE_AUTH_ERROR",
     });
   }
 }
+
+// =====================================================
+// EXPORT
+// =====================================================
 
 module.exports = {
   requireSupabaseAuth,

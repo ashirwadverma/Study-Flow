@@ -518,15 +518,21 @@ async function generateStudyPlanFromPYQ(req, res) {
 
       // Check capacity
       if (allocatedHours + hours <= totalCapacityHours + 4) { // small grace margin
-        // Calculate spread date: High priority topics get scheduled in earlier focused slots
-        const dayOffset = Math.min(
-          daysAvailable - 1,
-          Math.max(1, Math.floor((index / Math.max(1, sortedTopics.length)) * (daysAvailable - 2)) + 1)
-        );
+        // Calculate spread date: schedule sequentially from tomorrow across available days
+        const totalTopics = Math.max(1, sortedTopics.length);
+        let dayOffset;
+        if (daysAvailable >= totalTopics) {
+          dayOffset = Math.round((index / Math.max(1, totalTopics - 1)) * (daysAvailable - 2)) + 1;
+        } else {
+          dayOffset = Math.min(daysAvailable - 1, Math.floor((index / totalTopics) * daysAvailable) + 1);
+        }
 
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() + dayOffset);
-        const dateStr = targetDate.toISOString().split("T")[0];
+        const y = targetDate.getFullYear();
+        const m = String(targetDate.getMonth() + 1).padStart(2, "0");
+        const d = String(targetDate.getDate()).padStart(2, "0");
+        const dateStr = `${y}-${m}-${d}`;
 
         const sessionObj = {
           id: `ses_pyq_${Date.now()}_${index}`,

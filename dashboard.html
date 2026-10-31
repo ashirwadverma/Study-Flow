@@ -1021,11 +1021,103 @@
       }, 400);
     }
 
-    function todayStr(){return new Date().toISOString().split('T')[0];}
+    // Safe local date formatting (never shifts back across timezones)
+    function toLocalDateStr(d) {
+      if (!d || isNaN(d.getTime())) return '';
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    // Robust date parser supporting YYYY-MM-DD, DD-MM-YYYY, DD/MM/YYYY, and Date objects
+    function parseSafeDate(str) {
+      if (!str) return null;
+      if (str instanceof Date && !isNaN(str.getTime())) return str;
+      const s = String(str).trim();
+      const isoMatch = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+      if (isoMatch) return new Date(parseInt(isoMatch[1], 10), parseInt(isoMatch[2], 10) - 1, parseInt(isoMatch[3], 10));
+      const dmyMatch = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/);
+      if (dmyMatch) return new Date(parseInt(dmyMatch[3], 10), parseInt(dmyMatch[2], 10) - 1, parseInt(dmyMatch[1], 10));
+      const parsed = new Date(s);
+      return isNaN(parsed.getTime()) ? null : parsed;
+    }
+
+    function todayStr(){
+      return toLocalDateStr(new Date());
+    }
+
     function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-    function fmtDate(str){if(!str)return'—';const d=new Date(str+'T00:00:00');return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});}
-    function daysFrom(str){if(!str)return null;return Math.ceil((new Date(str+'T00:00:00')-new Date(todayStr()+'T00:00:00'))/86400000);}
+
+    function fmtDate(str){
+      if(!str) return '—';
+      const d = parseSafeDate(str);
+      if (!d) return str;
+      return d.toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'});
+    }
+
+    function daysFrom(str){
+      if(!str) return null;
+      const target = parseSafeDate(str);
+      if (!target) return null;
+      const today = parseSafeDate(todayStr());
+      return Math.round((target.getTime() - today.getTime()) / 86400000);
+    }
+
     function timeAgo(ts){const d=Date.now()-ts;if(d<60000)return'just now';if(d<3600000)return Math.floor(d/60000)+'m ago';if(d<86400000)return Math.floor(d/3600000)+'h ago';return Math.floor(d/86400000)+'d ago';}
+
+    // Intelligent chronological study schedule generator
+    function calculateScheduledDates(sessionsList, examDateInput) {
+      if (!Array.isArray(sessionsList) || sessionsList.length === 0) return [];
+      const N = sessionsList.length;
+
+      const today = parseSafeDate(todayStr()) || new Date();
+      // Study schedule starts tomorrow so today is not overloaded
+      const startDate = new Date(today);
+      startDate.setDate(startDate.getDate() + 1);
+
+      let examDateObj = parseSafeDate(examDateInput);
+      const defaultDurationDays = Math.max(21, Math.round(N * 2.2));
+
+      // If exam date missing, invalid, or already passed/today, schedule a realistic study timeline
+      if (!examDateObj || examDateObj <= startDate) {
+        examDateObj = new Date(today);
+        examDateObj.setDate(examDateObj.getDate() + defaultDurationDays);
+      }
+
+      const msPerDay = 86400000;
+      const daysUntilExam = Math.max(1, Math.round((examDateObj.getTime() - startDate.getTime()) / msPerDay));
+
+      // Reserve revision buffer days before final exam
+      let revisionDays = 0;
+      if (daysUntilExam > 14) {
+        revisionDays = Math.min(4, Math.floor(daysUntilExam * 0.12));
+      } else if (daysUntilExam > 5) {
+        revisionDays = 1;
+      }
+      const studySpan = Math.max(1, daysUntilExam - revisionDays);
+
+      return sessionsList.map((s, i) => {
+        let dayOffset;
+        if (studySpan >= N) {
+          // Plenty of days: evenly space topics across studySpan starting from tomorrow
+          dayOffset = Math.round((i / Math.max(1, N - 1)) * (studySpan - 1));
+        } else {
+          // High density: pack into available days leading up to exam
+          dayOffset = Math.min(studySpan - 1, Math.floor((i / N) * studySpan));
+        }
+
+        const sessionDate = new Date(startDate);
+        sessionDate.setDate(sessionDate.getDate() + dayOffset);
+        const dateStr = toLocalDateStr(sessionDate);
+
+        return {
+          ...s,
+          scheduledDate: dateStr,
+          dayOffset: dayOffset + 1
+        };
+      });
+    }
 
     // Toast message
     function showToast(msg, icon='✨'){
@@ -1033,6 +1125,18 @@
       t.className='toast';t.innerHTML=`<span>${icon}</span> <span>${msg}</span>`;
       tc.appendChild(t);setTimeout(()=>{t.style.opacity='0';t.style.transform='translateY(10px)';t.style.transition='all .3s';setTimeout(()=>t.remove(),300);},3200);
     }
+
+    // Expose core getters & state helpers globally for modules like PYQ Analyzer
+    window.getSubs = getSubs;
+    window.getSess = getSess;
+    window.saveSubs = saveSubs;
+    window.saveSess = saveSess;
+    window.getUserKey = getUserKey;
+    window.showToast = showToast;
+    window.parseSafeDate = parseSafeDate;
+    window.toLocalDateStr = toLocalDateStr;
+    window.fmtDate = fmtDate;
+    window.daysFrom = daysFrom;
 
     // ─── DATE DISPLAY ─────────────────────────────────────────
     const dateEl=document.getElementById('today-date');
@@ -1093,6 +1197,7 @@
 
     // ─── RENDER ALL ───────────────────────────────────────────
     function renderAll(){
+      window.renderAll = renderAll;
       const subs=getSubs(),sess=getSess(),acts=getActs();
 
       const setT=(id,val)=>{const el=document.getElementById(id);if(el)el.textContent=val;};
@@ -1900,15 +2005,22 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
       document.getElementById('prev-input-subname').value=subName;
       document.getElementById('prev-summary').textContent=data.summary||(data.instructor?'Instructor: '+data.instructor:'Syllabus parsed into structured study sessions.');
 
-      // Default exam date
-      let examDate=data.examDate||'';
-      if(!examDate&&data.exams&&data.exams.length)examDate=data.exams[0].date||'';
-      if(!examDate){
-        const d=new Date();d.setDate(d.getDate()+30);
-        examDate=d.toISOString().split('T')[0];
+      // Resolve target exam date
+      let examDate = data.examDate || '';
+      if (!examDate && data.exams && data.exams.length) examDate = data.exams[0].date || '';
+      
+      const parsedExamObj = parseSafeDate(examDate);
+      const todayObj = parseSafeDate(todayStr());
+      if (!parsedExamObj || parsedExamObj <= todayObj) {
+        const d = new Date();
+        d.setDate(d.getDate() + 35);
+        examDate = toLocalDateStr(d);
+      } else {
+        examDate = toLocalDateStr(parsedExamObj);
       }
-      document.getElementById('prev-input-examdate').value=examDate;
-      document.getElementById('prev-exam-badge').textContent='Exam: '+fmtDate(examDate);
+
+      const examDateInput = document.getElementById('prev-input-examdate');
+      if (examDateInput) examDateInput.value = examDate;
 
       const dbBadge = document.getElementById('prev-db-badge');
       if (dbBadge) {
@@ -1921,52 +2033,77 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
       }
 
       // Collect all topics/sessions
-      let sessionsList=[];
-      if(data.sessions&&data.sessions.length){
-        sessionsList=data.sessions;
-      }else if(data.units&&data.units.length){
-        data.units.forEach((u,ui)=>{
-          const unitTitle=u.title||`Unit ${u.unitNumber||ui+1}`;
-          (u.topics||[]).forEach(t=>{
-            if(typeof t==='string')sessionsList.push({topic:`${unitTitle}: ${t}`,hours:2,difficulty:'medium'});
-            else sessionsList.push({topic:`${unitTitle}: ${t.title||'Topic'}`,hours:t.hours||2,difficulty:t.difficulty||'medium'});
+      let sessionsList = [];
+      if (data.sessions && data.sessions.length) {
+        sessionsList = data.sessions;
+      } else if (data.units && data.units.length) {
+        data.units.forEach((u, ui) => {
+          const unitTitle = u.title || `Unit ${u.unitNumber || ui + 1}`;
+          (u.topics || []).forEach(t => {
+            if (typeof t === 'string') sessionsList.push({ topic: `${unitTitle}: ${t}`, hours: 2, difficulty: 'medium' });
+            else sessionsList.push({ topic: `${unitTitle}: ${t.title || 'Topic'}`, hours: t.hours || 2, difficulty: t.difficulty || 'medium' });
           });
         });
-      }else if(data.subjects&&data.subjects[0]&&data.subjects[0].units){
-        data.subjects[0].units.forEach((u,ui)=>{
-          const unitTitle=u.title||`Unit ${u.unitNumber||ui+1}`;
-          (u.topics||[]).forEach(t=>{
-            if(typeof t==='string')sessionsList.push({topic:`${unitTitle}: ${t}`,hours:2,difficulty:'medium'});
-            else sessionsList.push({topic:`${unitTitle}: ${t.title||'Topic'}`,hours:t.hours||2,difficulty:t.difficulty||'medium'});
+      } else if (data.subjects && data.subjects[0] && data.subjects[0].units) {
+        data.subjects[0].units.forEach((u, ui) => {
+          const unitTitle = u.title || `Unit ${u.unitNumber || ui + 1}`;
+          (u.topics || []).forEach(t => {
+            if (typeof t === 'string') sessionsList.push({ topic: `${unitTitle}: ${t}`, hours: 2, difficulty: 'medium' });
+            else sessionsList.push({ topic: `${unitTitle}: ${t.title || 'Topic'}`, hours: t.hours || 2, difficulty: t.difficulty || 'medium' });
           });
         });
       }
 
-      if(!sessionsList.length){
-        sessionsList=[{topic:'Introduction & Fundamentals',hours:2,difficulty:'easy'},{topic:'Core Concept Deep Dive',hours:2.5,difficulty:'medium'},{topic:'Advanced Problem Solving & Review',hours:3,difficulty:'hard'}];
+      if (!sessionsList.length) {
+        sessionsList = [
+          { topic: 'Introduction & Fundamentals', hours: 2, difficulty: 'easy' },
+          { topic: 'Core Concept Deep Dive', hours: 2.5, difficulty: 'medium' },
+          { topic: 'Advanced Problem Solving & Review', hours: 3, difficulty: 'hard' }
+        ];
       }
 
-      document.getElementById('prev-topics-count').textContent=sessionsList.length+' Topics';
-      document.getElementById('prev-units-count').textContent=(data.units?data.units.length:1)+' Units';
+      document.getElementById('prev-topics-count').textContent = sessionsList.length + ' Topics';
+      document.getElementById('prev-units-count').textContent = (data.units ? data.units.length : 1) + ' Units';
 
-      const daysUntil=Math.max(1,daysFrom(examDate)||28);
-      const dc={easy:'#10b981',medium:'#f59e0b',hard:'#ef4444'};
+      // Interactive function to recalculate & re-render study schedule
+      function updatePreviewSchedule(targetDateStr) {
+        const scheduled = calculateScheduledDates(sessionsList, targetDateStr);
+        currentAiResult._normalizedSessions = scheduled;
 
-      const renderedSessions=sessionsList.map((s,i)=>{
-        const dayOffset=Math.floor((i/(sessionsList.length||1))*(daysUntil-2))+1;
-        const targetDate=new Date();targetDate.setDate(targetDate.getDate()+dayOffset);
-        const schedStr=targetDate.toISOString().split('T')[0];
+        const dc = { easy: '#10b981', medium: '#f59e0b', hard: '#ef4444' };
+        const rows = scheduled.map(s => `<tr>
+          <td class="preview-topic-cell">${escH(s.topic || s.title)}</td>
+          <td class="preview-hours-cell">${s.hours || 2}h</td>
+          <td><span class="diff-dot" style="background:${dc[s.difficulty] || '#94a3b8'};"></span><span class="preview-diff-cell">${s.difficulty || 'medium'}</span></td>
+          <td class="preview-date-cell">${fmtDate(s.scheduledDate)}</td>
+        </tr>`).join('');
 
-        return`<tr>
-          <td class="preview-topic-cell">${escH(s.topic||s.title)}</td>
-          <td class="preview-hours-cell">${s.hours||2}h</td>
-          <td><span class="diff-dot" style="background:${dc[s.difficulty]||'#94a3b8'};"></span><span class="preview-diff-cell">${s.difficulty||'medium'}</span></td>
-          <td class="preview-date-cell">${fmtDate(schedStr)}</td>
-        </tr>`;
-      });
+        const tbody = document.getElementById('prev-sessions-tbody');
+        if (tbody) tbody.innerHTML = rows;
 
-      document.getElementById('prev-sessions-tbody').innerHTML=renderedSessions.join('');
-      currentAiResult._normalizedSessions=sessionsList;
+        const examBadge = document.getElementById('prev-exam-badge');
+        if (examBadge) {
+          const daysLeft = daysFrom(targetDateStr);
+          if (daysLeft !== null && daysLeft > 0) {
+            examBadge.textContent = `Exam: ${fmtDate(targetDateStr)} (${daysLeft}d left)`;
+          } else {
+            examBadge.textContent = `Exam: ${fmtDate(targetDateStr)}`;
+          }
+        }
+      }
+
+      // Initial schedule generation
+      updatePreviewSchedule(examDate);
+
+      // Real-time recalculation when user modifies exam date in preview modal
+      if (examDateInput) {
+        examDateInput.oninput = function() {
+          updatePreviewSchedule(this.value);
+        };
+        examDateInput.onchange = function() {
+          updatePreviewSchedule(this.value);
+        };
+      }
 
       openModal('ai-preview-modal');
     }
@@ -2037,21 +2174,17 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
         }
 
         const sess=getSess();
+        // Use the exact calculated & scheduled dates verified in the preview modal
         const sessionsList=currentAiResult._normalizedSessions||[];
-        const daysUntil=Math.max(1,daysFrom(examDate)||28);
 
         sessionsList.forEach((s,i)=>{
-          const dayOffset=Math.floor((i/(sessionsList.length||1))*(daysUntil-2))+1;
-          const targetDate=new Date();targetDate.setDate(targetDate.getDate()+dayOffset);
-          const schedStr=targetDate.toISOString().split('T')[0];
-
           sess.push({
             id:'ses_'+(Date.now()+i),
             subjectId:newSubId,
             topic:s.topic||s.title||`Topic ${i+1}`,
             hours:parseFloat(s.hours)||2,
             difficulty:s.difficulty||'medium',
-            date:schedStr,
+            date:s.scheduledDate||todayStr(),
             status:'pending'
           });
         });

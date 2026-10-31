@@ -5,12 +5,11 @@
  * previous-year question papers (PDF/Text/Scanned) using Gemini AI + Heuristic parser.
  */
 
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "..", "..", ".env") });
 const { GoogleGenAI } = require("@google/genai");
 const { extractTextFromPDF } = require("./pdfExtractor");
 const fs = require("fs");
-
-const apiKey = (process.env.GEMINI_API_KEY || "").trim();
-const ai = new GoogleGenAI({ apiKey });
 
 /**
  * Heuristic parser fallback for university question papers (AKTU, VTU, Mumbai, Delhi, GTU, CBSE, etc.)
@@ -262,12 +261,12 @@ ${extractedText ? `\n\nQUESTION PAPER RAW TEXT CONTENT:\n${extractedText.slice(0
     contents = prompt;
   }
 
-  // Candidate models with fast failover
+  // Candidate models with fast failover (gemini-3.5-flash handles multimodal PDFs with high accuracy)
   const candidateModels = [
-    process.env.GEMINI_MODEL,
-    "gemini-3.5-flash-lite",
-    "gemini-3.8-flash",
     "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    process.env.GEMINI_MODEL,
+    "gemini-3.8-flash",
   ].filter(Boolean);
 
   const uniqueModels = [...new Set(candidateModels)];
@@ -275,13 +274,15 @@ ${extractedText ? `\n\nQUESTION PAPER RAW TEXT CONTENT:\n${extractedText.slice(0
   for (const model of uniqueModels) {
     try {
       console.log(`Extracting PYQ questions using Gemini model: ${model}...`);
+      const currentApiKey = (process.env.GEMINI_API_KEY || "").trim();
+      const client = new GoogleGenAI({ apiKey: currentApiKey });
       
       const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Gemini request timeout")), 12000)
+        setTimeout(() => reject(new Error("Gemini request timeout (60s)")), 60000)
       );
 
       const response = await Promise.race([
-        ai.models.generateContent({ model, contents }),
+        client.models.generateContent({ model, contents }),
         timeoutPromise
       ]);
 
