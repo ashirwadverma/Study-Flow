@@ -1,0 +1,32 @@
+# ════════════════════════════════════════════════════════════════════
+# StudyFlow247 - Render Deployment Blueprint
+# Deploy your Express/Node.js backend to Render with one click.
+# ════════════════════════════════════════════════════════════════════
+
+services:
+  - type: web
+    name: studyflow-backend
+    env: node
+    plan: free
+    region: oregon
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: GEMINI_API_KEY
+        sync: false # Set your Gemini API key in the Render dashboard
+      - key: GEMINI_MODEL
+        value: gemini-3.5-flash-lite
+      - key: SUPABASE_URL
+        value: https://wunghwovfpwbwforqeaq.supabase.co
+      - key: SUPABASE_PUBLISHABLE_KEY
+        value: sb_publishable_7N7nid5nIBmgcD8N1zmfng_ohYSrKrd
+      - key: FRONTEND_URL
+        value: https://studyflow247.netlify.app
+      - key: SESSION_SECRET
+        generateValue: true
+

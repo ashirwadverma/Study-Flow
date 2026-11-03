@@ -1,0 +1,22 @@
+# ════════════════════════════════════════════════════════════════════
+# StudyFlow247 - Netlify Configuration File
+# ════════════════════════════════════════════════════════════════════
+
+[build]
+  publish = "."
+
+# Proxy all /api/* requests to your deployed backend (e.g. on Render)
+# Update "to" with your live Render backend URL once deployed.
+[[redirects]]
+  from = "/api/*"
+  to = "https://studyflow-backend.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "SAMEORIGIN"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+

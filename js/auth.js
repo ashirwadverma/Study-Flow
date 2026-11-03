@@ -3,11 +3,10 @@
  * Comprehensive client-side authentication manager for StudyFlow powered by Supabase Auth.
  *
  * Implements:
- * - Signup using supabase.auth.signUp()
- * - Login using supabase.auth.signInWithPassword()
- * - Logout using supabase.auth.signOut()
+ * - Direct Supabase Auth (signUp, signInWithPassword, signOut)
+ * - Automatic seamless backend fallback if client SDK is temporarily unavailable
  * - Session persistence across tabs and reloads
- * - State change synchronization using onAuthStateChange()
+ * - State change synchronization
  * - Bearer token attachment via fetchWithAuth()
  */
 
@@ -45,6 +44,52 @@ const AuthManager = {
     } catch (e) {
       return null;
     }
+  },
+
+  // Internal helper to get or initialize the Supabase client
+  async _getClient() {
+    // 1. Direct active instance
+    if (window.supabaseClient && window.supabaseClient.auth) {
+      return window.supabaseClient;
+    }
+
+    // 2. Official resolver function
+    if (typeof window.getSupabaseClient === 'function') {
+      try {
+        const client = await window.getSupabaseClient();
+        if (client && client.auth) return client;
+      } catch (e) {
+        console.warn('getSupabaseClient notice:', e);
+      }
+    }
+
+    // 3. Direct instantiation from window.supabase
+    const config = window.SUPABASE_CONFIG || {
+      url: "https://wunghwovfpwbwforqeaq.supabase.co",
+      publishableKey: "sb_publishable_7N7nid5nIBmgcD8N1zmfng_ohYSrKrd",
+    };
+
+    if (window.supabase && typeof window.supabase.createClient === 'function') {
+      try {
+        const storageObj = (typeof window !== 'undefined' && window.localStorage) ? window.localStorage : undefined;
+        const client = window.supabase.createClient(config.url, config.publishableKey, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            detectSessionInUrl: true,
+            storage: storageObj,
+          },
+        });
+        if (client && client.auth) {
+          window.supabaseClient = client;
+          return client;
+        }
+      } catch (err) {
+        console.warn('Direct Supabase initialization notice:', err);
+      }
+    }
+
+    return null;
   },
 
   // Internal helper to save Supabase session & user
@@ -98,10 +143,10 @@ const AuthManager = {
     let token = AuthManager.getToken();
 
     // If token is missing, attempt quick session retrieval from Supabase client
-    if (!token && typeof window.getSupabaseClient === 'function') {
+    if (!token) {
       try {
-        const client = await window.getSupabaseClient();
-        if (client) {
+        const client = await AuthManager._getClient();
+        if (client && client.auth) {
           const { data } = await client.auth.getSession();
           if (data && data.session && data.session.access_token) {
             token = data.session.access_token;
@@ -128,10 +173,11 @@ const AuthManager = {
       credentials: 'include',
     };
 
-    const apiBase = (typeof window !== 'undefined' && (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '5000')))
-      ? 'http://localhost:5000'
-      : '';
-    const fullUrl = url.startsWith('http') ? url : (apiBase + (url.startsWith('/') ? '' : '/') + url);
+    const fullUrl = url.startsWith('http')
+      ? url
+      : (typeof window.getStudyFlowApiUrl === 'function'
+          ? window.getStudyFlowApiUrl(url)
+          : url);
 
     return fetch(fullUrl, fetchConfig);
   },
@@ -139,7 +185,7 @@ const AuthManager = {
   // Check active session status via Supabase Auth
   async checkSession() {
     try {
-      const client = typeof window.getSupabaseClient === 'function' ? await window.getSupabaseClient() : null;
+      const client = await AuthManager._getClient();
 
       if (!client) {
         const cachedUser = AuthManager.getUser();
@@ -150,9 +196,11 @@ const AuthManager = {
       }
 
       const { data, error } = await client.auth.getSession();
-
-      if (error || !data || !data.session || !data.session.user) {
-        AuthManager._clearSession();
+      if (error || !data || !data.session) {
+        const cachedUser = AuthManager.getUser();
+        if (cachedUser && AuthManager.getToken()) {
+          return { authenticated: true, user: cachedUser, offline: true };
+        }
         return { authenticated: false, user: null };
       }
 
@@ -170,60 +218,79 @@ const AuthManager = {
 
   // Log in with email and password using Supabase Auth
   async login(email, password) {
+    const cleanEmail = String(email || '').trim().toLowerCase();
+    if (!cleanEmail || !password) {
+      return { success: false, message: 'Please enter both your email address and password.' };
+    }
+
     try {
-      const client = typeof window.getSupabaseClient === 'function' ? await window.getSupabaseClient() : null;
-      if (!client) {
-        return {
-          success: false,
-          message: 'Supabase client is not available. Please refresh the page and try again.',
-        };
-      }
+      const client = await AuthManager._getClient();
 
-      const cleanEmail = String(email || '').trim().toLowerCase();
-      if (!cleanEmail || !password) {
-        return { success: false, message: 'Please enter both your email address and password.' };
-      }
+      // Primary path: Supabase Auth
+      if (client && client.auth) {
+        const { data, error } = await client.auth.signInWithPassword({
+          email: cleanEmail,
+          password: String(password),
+        });
 
-      const { data, error } = await client.auth.signInWithPassword({
-        email: cleanEmail,
-        password: String(password),
-      });
+        if (error) {
+          const msg = error.message || '';
+          const isUnverified =
+            msg.toLowerCase().includes('email not confirmed') ||
+            msg.toLowerCase().includes('not verified');
 
-      if (error) {
-        const msg = error.message || '';
-        const isUnverified =
-          msg.toLowerCase().includes('email not confirmed') ||
-          msg.toLowerCase().includes('not verified');
+          if (isUnverified) {
+            return {
+              success: false,
+              unverified: true,
+              email: cleanEmail,
+              message: 'Your email address is not verified yet. Please check your inbox or resend the verification email.',
+            };
+          }
 
-        if (isUnverified) {
           return {
             success: false,
-            unverified: true,
-            email: cleanEmail,
-            message: 'Your email address is not verified yet. Please check your inbox or resend the verification email.',
+            message:
+              msg === 'Invalid login credentials'
+                ? 'Invalid email or password. Please check your credentials.'
+                : msg,
           };
         }
 
-        return {
-          success: false,
-          message:
-            msg === 'Invalid login credentials'
-              ? 'Invalid email or password. Please check your credentials.'
-              : msg,
-        };
+        if (data && data.session && data.user) {
+          AuthManager._saveSession(data.session, data.user);
+          return {
+            success: true,
+            user: AuthManager.getUser(),
+            token: data.session.access_token,
+            message: 'Signed in successfully.',
+          };
+        }
+
+        return { success: false, message: 'Could not create an active session. Please try again.' };
       }
 
-      if (data && data.session && data.user) {
-        AuthManager._saveSession(data.session, data.user);
-        return {
-          success: true,
-          user: AuthManager.getUser(),
-          token: data.session.access_token,
-          message: 'Signed in successfully.',
-        };
+      // Secondary path: Backend auth endpoint
+      const endpoint = (typeof window.getStudyFlowApiUrl === 'function')
+        ? window.getStudyFlowApiUrl('/api/auth/login')
+        : '/api/auth/login';
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail, password: String(password) }),
+      });
+      const rawText = await resp.text().catch(() => '');
+      let json = {};
+      try {
+        json = JSON.parse(rawText);
+      } catch (_) {
+        json = { success: false, message: 'Invalid response from authentication server.' };
       }
-
-      return { success: false, message: 'Could not create an active session. Please try again.' };
+      if (json.success && json.token && json.user) {
+        AuthManager.setToken(json.token);
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(json.user));
+      }
+      return json;
     } catch (error) {
       console.error('Login error:', error);
       return {
@@ -235,72 +302,90 @@ const AuthManager = {
 
   // Sign up for a new account using Supabase Auth
   async signup(name, email, password, confirmPassword) {
+    const cleanName = String(name || '').trim();
+    const cleanEmail = String(email || '').trim().toLowerCase();
+
+    if (!cleanName || cleanName.length < 2) {
+      return { success: false, message: 'Please enter a valid full name (minimum 2 characters).' };
+    }
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      return { success: false, message: 'Please provide a valid email address.' };
+    }
+    if (!password || password.length < 8) {
+      return { success: false, message: 'Password must be at least 8 characters long.' };
+    }
+    if (password !== confirmPassword) {
+      return { success: false, message: 'Passwords do not match. Please re-enter.' };
+    }
+
     try {
-      const client = typeof window.getSupabaseClient === 'function' ? await window.getSupabaseClient() : null;
-      if (!client) {
-        return {
-          success: false,
-          message: 'Supabase client is not available. Please refresh the page and try again.',
-        };
-      }
+      const client = await AuthManager._getClient();
 
-      const cleanName = String(name || '').trim();
-      const cleanEmail = String(email || '').trim().toLowerCase();
-
-      if (!cleanName || cleanName.length < 2) {
-        return { success: false, message: 'Please enter a valid full name (minimum 2 characters).' };
-      }
-      if (!cleanEmail || !cleanEmail.includes('@')) {
-        return { success: false, message: 'Please provide a valid email address.' };
-      }
-      if (!password || password.length < 8) {
-        return { success: false, message: 'Password must be at least 8 characters long.' };
-      }
-      if (password !== confirmPassword) {
-        return { success: false, message: 'Passwords do not match. Please re-enter.' };
-      }
-
-      const { data, error } = await client.auth.signUp({
-        email: cleanEmail,
-        password: String(password),
-        options: {
-          data: {
-            name: cleanName,
-            full_name: cleanName,
+      // Primary path: Supabase Auth
+      if (client && client.auth) {
+        const { data, error } = await client.auth.signUp({
+          email: cleanEmail,
+          password: String(password),
+          options: {
+            data: {
+              name: cleanName,
+              full_name: cleanName,
+            },
           },
-        },
-      });
+        });
 
-      if (error) {
-        return {
-          success: false,
-          message: error.message || 'Failed to create account.',
-        };
-      }
+        if (error) {
+          return {
+            success: false,
+            message: error.message || 'Failed to create account.',
+          };
+        }
 
-      const user = data && data.user;
-      const session = data && data.session;
+        const user = data && data.user;
+        const session = data && data.session;
+        const needsConfirmation = !session;
 
-      // If email confirmation is enabled in Supabase, session is null until user clicks the email link
-      const needsConfirmation = !session;
+        if (session && user) {
+          AuthManager._saveSession(session, user, cleanName);
+          return {
+            success: true,
+            needsConfirmation: false,
+            user: AuthManager.getUser(),
+            token: session.access_token,
+            message: 'Account created and signed in successfully! Redirecting...',
+          };
+        }
 
-      if (session && user) {
-        AuthManager._saveSession(session, user, cleanName);
         return {
           success: true,
-          needsConfirmation: false,
-          user: AuthManager.getUser(),
-          token: session.access_token,
-          message: 'Account created and signed in successfully! Redirecting...',
+          needsConfirmation: true,
+          email: cleanEmail,
+          message: `Account created successfully! We sent a confirmation link to ${cleanEmail}. Please verify your email before logging in.`,
         };
       }
 
-      return {
-        success: true,
-        needsConfirmation: true,
-        email: cleanEmail,
-        message: `Account created successfully! We sent a confirmation link to ${cleanEmail}. Please verify your email before logging in.`,
-      };
+      // Secondary path: Backend auth endpoint
+      const endpoint = (typeof window.getStudyFlowApiUrl === 'function')
+        ? window.getStudyFlowApiUrl('/api/auth/signup')
+        : '/api/auth/signup';
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: cleanName,
+          email: cleanEmail,
+          password: String(password),
+          confirmPassword: String(confirmPassword),
+        }),
+      });
+      const rawText = await resp.text().catch(() => '');
+      let json = {};
+      try {
+        json = JSON.parse(rawText);
+      } catch (_) {
+        json = { success: false, message: 'Invalid response from registration server.' };
+      }
+      return json;
     } catch (error) {
       console.error('Signup error:', error);
       return {
@@ -312,29 +397,45 @@ const AuthManager = {
 
   // Resend verification email using Supabase Auth
   async resendVerification(email) {
+    const cleanEmail = String(email || '').trim().toLowerCase();
     try {
-      const client = typeof window.getSupabaseClient === 'function' ? await window.getSupabaseClient() : null;
-      if (!client) {
-        return { success: false, message: 'Authentication client unavailable.' };
-      }
+      const client = await AuthManager._getClient();
+      if (client && client.auth) {
+        const { error } = await client.auth.resend({
+          type: 'signup',
+          email: cleanEmail,
+        });
 
-      const cleanEmail = String(email || '').trim().toLowerCase();
-      const { error } = await client.auth.resend({
-        type: 'signup',
-        email: cleanEmail,
-      });
+        if (error) {
+          return {
+            success: false,
+            message: error.message || 'Failed to resend confirmation email.',
+          };
+        }
 
-      if (error) {
         return {
-          success: false,
-          message: error.message || 'Failed to resend confirmation email.',
+          success: true,
+          message: `Verification link resent to ${cleanEmail}. Please check your inbox and spam folder.`,
         };
       }
 
-      return {
-        success: true,
-        message: `Verification link resent to ${cleanEmail}. Please check your inbox and spam folder.`,
-      };
+      // Backend fallback
+      const endpoint = (typeof window.getStudyFlowApiUrl === 'function')
+        ? window.getStudyFlowApiUrl('/api/auth/resend-verification')
+        : '/api/auth/resend-verification';
+      const resp = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: cleanEmail }),
+      });
+      const rawText = await resp.text().catch(() => '');
+      let json = {};
+      try {
+        json = JSON.parse(rawText);
+      } catch (_) {
+        json = { success: false, message: 'Invalid response from email service.' };
+      }
+      return json;
     } catch (error) {
       return {
         success: false,
@@ -346,8 +447,8 @@ const AuthManager = {
   // Log out using Supabase Auth and invalidate local session
   async logout() {
     try {
-      const client = typeof window.getSupabaseClient === 'function' ? await window.getSupabaseClient() : null;
-      if (client) {
+      const client = await AuthManager._getClient();
+      if (client && client.auth) {
         await client.auth.signOut();
       }
     } catch (e) {
@@ -368,6 +469,18 @@ const AuthManager = {
     return session.user;
   },
 
+  // Safe JSON response parser
+  async _safeJson(response) {
+    if (!response) return null;
+    try {
+      const text = await response.text();
+      if (!text || !text.trim()) return null;
+      return JSON.parse(text);
+    } catch (_) {
+      return null;
+    }
+  },
+
   // Sync user study data to/from server with Supabase Bearer token
   async syncUserData(studyData) {
     try {
@@ -376,7 +489,7 @@ const AuthManager = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(studyData),
       });
-      return await response.json();
+      return await AuthManager._safeJson(response);
     } catch (e) {
       console.warn('Background study data sync note:', e.message);
       return null;
@@ -389,8 +502,8 @@ const AuthManager = {
       const response = await AuthManager.fetchWithAuth('/api/user/data', {
         method: 'GET',
       });
-      const data = await response.json();
-      if (response.ok && data.success) {
+      const data = await AuthManager._safeJson(response);
+      if (response && response.ok && data && data.success) {
         return data.data;
       }
       return null;
@@ -407,8 +520,8 @@ const AuthManager = {
       const response = await AuthManager.fetchWithAuth('/api/subjects', {
         method: 'GET',
       });
-      const data = await response.json();
-      if (response.ok && data.success && Array.isArray(data.data)) {
+      const data = await AuthManager._safeJson(response);
+      if (response && response.ok && data && data.success && Array.isArray(data.data)) {
         return data.data;
       }
       return null;
@@ -426,7 +539,7 @@ const AuthManager = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subjectPayload),
       });
-      const data = await response.json();
+      const data = await AuthManager._safeJson(response);
       return { ok: response.ok, status: response.status, data };
     } catch (e) {
       console.warn('[Supabase] createSupabaseSubject error:', e.message);
@@ -443,7 +556,7 @@ const AuthManager = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatePayload),
       });
-      const data = await response.json();
+      const data = await AuthManager._safeJson(response);
       return { ok: response.ok, status: response.status, data };
     } catch (e) {
       console.warn('[Supabase] updateSupabaseSubject error:', e.message);
@@ -458,7 +571,7 @@ const AuthManager = {
       const response = await AuthManager.fetchWithAuth(`/api/subjects/${encodeURIComponent(id)}`, {
         method: 'DELETE',
       });
-      const data = await response.json();
+      const data = await AuthManager._safeJson(response);
       return { ok: response.ok, status: response.status, data };
     } catch (e) {
       console.warn('[Supabase] deleteSupabaseSubject error:', e.message);

@@ -58,7 +58,13 @@ async function analyzeSyllabus(req, res) {
       fileBuffer = fs.readFileSync(filePath);
       console.log("File received:", filename, "Type:", mimeType, "Size:", fileBuffer.length, "bytes");
 
-      if (mimeType === "application/pdf") {
+      const isPdf =
+        mimeType === "application/pdf" ||
+        mimeType === "application/x-pdf" ||
+        (filename && filename.toLowerCase().endsWith(".pdf"));
+
+      if (isPdf) {
+        mimeType = "application/pdf";
         try {
           const extracted = await extractTextFromPDF(filePath);
           if (extracted && extracted.trim().length >= 15) {
@@ -70,14 +76,19 @@ async function analyzeSyllabus(req, res) {
         } catch (pdfErr) {
           console.warn("PDF text parse note:", pdfErr.message);
         }
-      } else if (mimeType === "text/plain") {
+      } else if (mimeType === "text/plain" || (filename && filename.toLowerCase().endsWith(".txt"))) {
+        mimeType = "text/plain";
         syllabusText = fileBuffer.toString("utf-8");
-      } else if (mimeType && mimeType.startsWith("image/")) {
+      } else if ((mimeType && mimeType.startsWith("image/")) || /\.(png|jpe?g|webp)$/i.test(filename || "")) {
+        if (!mimeType || !mimeType.startsWith("image/")) {
+          const ext = (filename || "").split(".").pop().toLowerCase();
+          mimeType = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : "image/jpeg";
+        }
         console.log("Image syllabus uploaded; using Gemini vision analysis.");
       }
-    } else if (req.body && req.body.syllabusText) {
-      syllabusText = req.body.syllabusText;
-      filename = req.body.title || "Pasted Syllabus";
+    } else if (req.body && (req.body.syllabusText || req.body.text || req.body.syllabus || req.body.content)) {
+      syllabusText = req.body.syllabusText || req.body.text || req.body.syllabus || req.body.content;
+      filename = req.body.title || req.body.subjectName || req.body.courseName || "Pasted Syllabus";
     } else {
       return res.status(400).json({
         success: false,

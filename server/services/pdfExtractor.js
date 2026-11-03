@@ -1,15 +1,33 @@
 const fs = require("fs");
-const { PDFParse } = require("pdf-parse");
+const pdfModule = require("pdf-parse");
 
 async function extractTextFromPDF(filePath) {
   try {
     const fileBuffer = fs.readFileSync(filePath);
-    const parser = new PDFParse({
-      data: fileBuffer,
-    });
-    const result = await parser.getText();
-    await parser.destroy();
-    return (result && result.text) ? result.text : "";
+
+    // Support pdf-parse v2 (PDFParse class)
+    if (pdfModule && typeof pdfModule.PDFParse === "function") {
+      const parser = new pdfModule.PDFParse({
+        data: fileBuffer,
+      });
+      const result = await parser.getText();
+      if (typeof parser.destroy === "function") {
+        await parser.destroy();
+      }
+      if (result && result.text && result.text.trim()) {
+        return result.text;
+      }
+    }
+
+    // Support pdf-parse v1 (function)
+    if (typeof pdfModule === "function") {
+      const result = await pdfModule(fileBuffer);
+      if (result && result.text && result.text.trim()) {
+        return result.text;
+      }
+    }
+
+    return "";
   } catch (err) {
     console.warn("PDF text layer extraction note:", err.message);
     return "";

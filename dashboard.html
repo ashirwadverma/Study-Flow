@@ -927,9 +927,16 @@
   <!-- Toast Container -->
   <div class="toast-container" id="toast-container"></div>
 
-  <script src="/js/supabase-config.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>if (!window.supabase) document.write('<script src="/vendor/supabase/supabase.js"><\/script>');</script>
+  <script src="./js/api-config.js"></script>
+  <script src="./js/supabase-config.js"></script>
+  <script src="./vendor/supabase/supabase.js"></script>
+  <script>
+    if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+      const cdnScript = document.createElement('script');
+      cdnScript.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      document.head.appendChild(cdnScript);
+    }
+  </script>
   <script src="./js/supabaseClient.js"></script>
   <script src="./js/auth.js"></script>
   <script src="./js/pyq.js"></script>
@@ -1894,24 +1901,52 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
         },1900);
 
         try{
-          const apiBase=(window.location.protocol==='file:'||(window.location.port&&window.location.port!=='5000'))?'http://localhost:5000':'';
-          const token=typeof AuthManager!=='undefined'?AuthManager.getToken():'';
+          const apiUrl = (typeof window.getStudyFlowApiUrl === 'function')
+            ? window.getStudyFlowApiUrl('/api/syllabus/analyze')
+            : '/api/syllabus/analyze';
+          const token = typeof AuthManager !== 'undefined' ? AuthManager.getToken() : '';
           let res;
-          if(formData){
-            const headers={};
-            if(token)headers['Authorization']=`Bearer ${token}`;
-            res=await fetch(`${apiBase}/api/syllabus/analyze`,{method:'POST',headers,body:formData});
-          }else{
-            const headers={'Content-Type':'application/json'};
-            if(token)headers['Authorization']=`Bearer ${token}`;
-            res=await fetch(`${apiBase}/api/syllabus/analyze`,{method:'POST',headers,body:JSON.stringify(jsonBody)});
+          try {
+            if(formData){
+              const headers={};
+              if(token)headers['Authorization']=`Bearer ${token}`;
+              res=await fetch(apiUrl,{method:'POST',headers,body:formData});
+            }else{
+              const headers={'Content-Type':'application/json'};
+              if(token)headers['Authorization']=`Bearer ${token}`;
+              res=await fetch(apiUrl,{method:'POST',headers,body:JSON.stringify(jsonBody)});
+            }
+          } catch (netErr) {
+            console.error('[AI Syllabus] Network connection error:', netErr);
+            throw new Error(`Failed to reach backend server at ${apiUrl}. Please verify your backend is running or deployed on Render.`);
           }
 
           clearInterval(interval);
-          const data=await res.json();
+
+          let rawText = '';
+          try {
+            rawText = await res.text();
+          } catch (textErr) {
+            console.error('[AI Syllabus] Could not read response text:', textErr);
+          }
+
+          if (!rawText || !rawText.trim()) {
+            throw new Error(`The backend server returned an empty response (Status ${res ? res.status : 'unknown'}). If using Netlify, verify the backend is deployed on Render and connected via _redirects or js/api-config.js.`);
+          }
+
+          let data = null;
+          try {
+            data = JSON.parse(rawText);
+          } catch (jsonErr) {
+            console.warn('[AI Syllabus] Non-JSON response from server (Status ' + (res ? res.status : '') + '):', rawText.slice(0, 300));
+            if (rawText.includes('<!DOCTYPE') || rawText.includes('<html')) {
+              throw new Error(`The server returned an HTML page (Status ${res ? res.status : ''}). This occurs when the request hits a static host instead of the backend API. Please configure your deployed backend URL in js/api-config.js or Netlify redirects.`);
+            }
+            throw new Error(`Invalid response format from server: ${rawText.slice(0, 120)}`);
+          }
 
           if(!res.ok||!data.success){
-            throw new Error(data.message||'Failed to analyze syllabus.');
+            throw new Error(data.message||`Failed to analyze syllabus (HTTP ${res.status}).`);
           }
 
           currentAiResult=data.data;
@@ -1984,11 +2019,17 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
           clearInterval(interval);
           document.getElementById('upload-input-view').style.display='block';
           document.getElementById('upload-loading-view').style.display='none';
-          let errorMsg=e.message||'Error connecting to syllabus AI server.';
-          if(errorMsg==='Failed to fetch'||errorMsg.includes('fetch')){
-            errorMsg='Failed to fetch from server. Please verify the backend server is running at http://localhost:5000 (npm start).';
+          let errorMsg = e.message || 'Error connecting to syllabus AI server.';
+          if (
+            errorMsg === 'Failed to fetch' ||
+            errorMsg.includes('fetch') ||
+            errorMsg.includes('Unexpected token') ||
+            errorMsg.includes('is not valid JSON') ||
+            errorMsg.includes('<!DOCTYPE')
+          ) {
+            errorMsg = 'Could not reach backend API or received an HTML response. Please verify the backend server is running at http://localhost:5000 (run "npm start" in terminal).';
           }
-          err.textContent=errorMsg;
+          err.textContent = errorMsg;
           err.style.display='block';
         }
       });
@@ -2222,13 +2263,16 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
       try {
         const token = localStorage.getItem('studyflow_auth_token');
         if (token) {
-          const res = await fetch('/api/notifications', {
+          const notifUrl = (typeof window.getStudyFlowApiUrl === 'function')
+            ? window.getStudyFlowApiUrl('/api/notifications')
+            : '/api/notifications';
+          const res = await fetch(notifUrl, {
             headers: { 'Authorization': `Bearer ${token}` }
           });
           if (res.ok) {
-            const data = await res.json();
+            const data = await res.json().catch(() => null);
             const noteEl = document.getElementById('settings-email-note');
-            if (noteEl && data.summary) {
+            if (noteEl && data && data.summary) {
               noteEl.innerHTML = `Achievement emails sent: <strong>${data.summary.sent || 0}</strong> • Pending/Retrying: <strong>${(data.summary.failed || 0) + (data.summary.pending || 0)}</strong><br>Emails are sent to your verified student account address.`;
             }
           }
@@ -2258,7 +2302,10 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
       try {
         const token = localStorage.getItem('studyflow_auth_token');
         if (token) {
-          const res = await fetch('/api/settings/notifications', {
+          const settingsUrl = (typeof window.getStudyFlowApiUrl === 'function')
+            ? window.getStudyFlowApiUrl('/api/settings/notifications')
+            : '/api/settings/notifications';
+          const res = await fetch(settingsUrl, {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',

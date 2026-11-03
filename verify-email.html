@@ -231,9 +231,16 @@
     </div>
   </div>
 
-  <script src="/js/supabase-config.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>if (!window.supabase) document.write('<script src="/vendor/supabase/supabase.js"><\/script>');</script>
+  <script src="./js/api-config.js"></script>
+  <script src="./js/supabase-config.js"></script>
+  <script src="./vendor/supabase/supabase.js"></script>
+  <script>
+    if (!window.supabase || typeof window.supabase.createClient !== 'function') {
+      const cdnScript = document.createElement('script');
+      cdnScript.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      document.head.appendChild(cdnScript);
+    }
+  </script>
   <script src="./js/supabaseClient.js"></script>
   <script src="./js/auth.js"></script>
   <script>
@@ -292,8 +299,17 @@
       }
 
       try {
-        const response = await fetch(`/api/auth/verify-email?token=${encodeURIComponent(token)}`);
-        const data = await response.json();
+        const verifyUrl = (typeof window.getStudyFlowApiUrl === 'function')
+          ? window.getStudyFlowApiUrl(`/api/auth/verify-email?token=${encodeURIComponent(token)}`)
+          : `/api/auth/verify-email?token=${encodeURIComponent(token)}`;
+        const response = await fetch(verifyUrl);
+        const rawText = await response.text().catch(() => '');
+        let data = {};
+        try {
+          data = JSON.parse(rawText);
+        } catch (_) {
+          data = { success: false, message: 'Invalid response from verification server.' };
+        }
 
         viewLoading.style.display = 'none';
 

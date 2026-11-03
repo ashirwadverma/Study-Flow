@@ -29,8 +29,11 @@ const PYQManager = {
       headers['Authorization'] = `Bearer ${token}`;
       headers['x-auth-token'] = token;
     }
-    const apiBase = (window.location.protocol === 'file:' || (window.location.port && window.location.port !== '5000')) ? 'http://localhost:5000' : '';
-    const fullUrl = url.startsWith('http') ? url : (apiBase + (url.startsWith('/') ? '' : '/') + url);
+    const fullUrl = url.startsWith('http')
+      ? url
+      : (typeof window.getStudyFlowApiUrl === 'function'
+          ? window.getStudyFlowApiUrl(url)
+          : url);
     return fetch(fullUrl, { ...options, headers, credentials: 'include' });
   },
 
@@ -45,8 +48,12 @@ const PYQManager = {
   async loadSubjectsAndHistory() {
     try {
       const historyRes = await this.fetchAuth('/api/pyq/history');
-      const historyData = await historyRes.json();
-      if (historyData.success) {
+      const rawText = await historyRes.text().catch(() => '');
+      let historyData = null;
+      try {
+        historyData = JSON.parse(rawText);
+      } catch (_) {}
+      if (historyData && historyData.success) {
         this.pyqHistory = historyData.data || [];
         this.updateBadgeCount(this.pyqHistory.length);
       }
@@ -133,8 +140,12 @@ const PYQManager = {
 
     try {
       const res = await this.fetchAuth(`/api/pyq/subject/${encodeURIComponent(subjectId)}`);
-      const data = await res.json();
-      if (data.success && data.data) {
+      const rawText = await res.text().catch(() => '');
+      let data = null;
+      try {
+        data = JSON.parse(rawText);
+      } catch (_) {}
+      if (data && data.success && data.data) {
         this.activeAnalysis = data.data;
         this.renderActiveAnalysis();
       } else {
@@ -1169,7 +1180,16 @@ const PYQManager = {
       });
 
       clearInterval(interval);
-      const data = await res.json();
+
+      const contentType = (res && res.headers && res.headers.get('content-type')) || '';
+      let data;
+      if (contentType.includes('application/json')) {
+        data = await res.json();
+      } else {
+        const raw = await res.text().catch(() => '');
+        console.warn('[PYQ] Non-JSON response:', raw.slice(0, 300));
+        throw new Error(`Server returned HTML response (Status ${res.status}). Please verify the backend server is running at http://localhost:5000 (npm start).`);
+      }
 
       if (!res.ok || !data.success) {
         throw new Error(data.message || 'Analysis failed.');
@@ -1185,7 +1205,11 @@ const PYQManager = {
       clearInterval(interval);
       document.getElementById('pyq-upload-input-view').style.display = 'block';
       document.getElementById('pyq-upload-loading-view').style.display = 'none';
-      err.innerHTML = e.message || 'Error processing question papers.';
+      let msg = e.message || 'Error processing question papers.';
+      if (msg.includes('Unexpected token') || msg.includes('is not valid JSON') || msg.includes('<!DOCTYPE')) {
+        msg = 'Could not reach backend API or received an HTML response. Please verify the backend server is running at http://localhost:5000 (npm start).';
+      }
+      err.innerHTML = msg;
       err.style.display = 'block';
     }
   },

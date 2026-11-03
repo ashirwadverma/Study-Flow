@@ -67,10 +67,33 @@ process.on("uncaughtException", (err) => {
 
 app.set("trust proxy", isProduction ? 1 : false);
 
+const allowedOrigins = [
+  "https://studyflow247.netlify.app",
+  process.env.FRONTEND_URL,
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: true,
+    origin: function (origin, callback) {
+      // Allow requests with no origin (e.g. mobile apps, curl, or same-origin)
+      if (!origin) return callback(null, true);
+      // Allow any localhost / 127.0.0.1 port (3000, 5000, 5500, etc.)
+      if (
+        /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
+        /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin)
+      ) {
+        return callback(null, true);
+      }
+      // Allow Netlify production & preview domains (*.netlify.app)
+      if (origin.endsWith(".netlify.app") || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      // Fallback: allow to avoid breaking other clients
+      return callback(null, true);
+    },
     credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "x-auth-token"],
   }),
 );
 
@@ -352,6 +375,14 @@ app.get("/api/health", (req, res) => {
   });
 });
 
+// JSON 404 handler for unmatched /api routes (prevents returning HTML error pages to API clients)
+app.use("/api", (req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `API endpoint ${req.method} ${req.originalUrl} not found. Please verify backend routes.`,
+  });
+});
+
 // =====================================================
 // 14. FRONTEND STATIC FILES
 // =====================================================
@@ -380,7 +411,7 @@ app.use((error, req, res, next) => {
 // 16. START SERVER
 // =====================================================
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, "0.0.0.0", () => {
   console.log("---------------------------------------");
   console.log("Syllabus Study Planner Server Started");
   console.log("---------------------------------------");
