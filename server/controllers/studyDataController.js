@@ -4,7 +4,7 @@ const db = require("../services/dbAdapter");
 async function getUserStudyData(req, res) {
   try {
     const userId = req.user._id || req.user.id;
-    const data = await db.getUserStudyData(userId);
+    const data = await db.getUserStudyData(userId, req.supabaseClient);
 
     return res.status(200).json({
       success: true,
@@ -42,10 +42,10 @@ async function saveUserStudyData(req, res) {
           if (!sess) return sess;
           const status = String(sess.status || "").toLowerCase();
           if (status === "done" || status === "completed") {
-            const isVerifiedCompleted = await db.isTopicCompleted(userId, sess.id);
+            const isVerifiedCompleted = await db.isTopicCompleted(userId, sess.id, req.supabaseClient);
             if (!isVerifiedCompleted) {
               // Revert unauthorized completion
-              const progress = await db.getTopicProgress(userId, sess.id);
+              const progress = await db.getTopicProgress(userId, sess.id, req.supabaseClient);
               return {
                 ...sess,
                 status: progress && progress.status === "needs_revision" ? "needs_revision" : "pending",
@@ -69,7 +69,7 @@ async function saveUserStudyData(req, res) {
     if (Array.isArray(activity)) updateFields.activity = activity;
     if (settings && typeof settings === "object") updateFields.settings = settings;
 
-    const data = await db.saveUserStudyData(userId, updateFields);
+    const data = await db.saveUserStudyData(userId, updateFields, req.supabaseClient);
 
     return res.status(200).json({
       success: true,

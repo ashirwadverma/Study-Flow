@@ -397,12 +397,12 @@ JSON OUTPUT SCHEMA:
  * Service: Retrieve or Generate a 10-Question Assessment for a Topic
  * Strips answers and explanations before presenting to frontend
  */
-async function getOrGenerateAssessment({ userId, topicId, forceRegenerate = false }) {
+async function getOrGenerateAssessment({ userId, topicId, forceRegenerate = false, supabaseClient }) {
   const uid = String(userId);
   const tid = String(topicId);
 
   // 1. Fetch user's study data to find the session/topic and subject
-  const userStudyData = await db.getUserStudyData(uid);
+  const userStudyData = await db.getUserStudyData(uid, supabaseClient);
   const sessions = userStudyData.sessions || [];
   const subjects = userStudyData.subjects || [];
 
@@ -422,7 +422,7 @@ async function getOrGenerateAssessment({ userId, topicId, forceRegenerate = fals
   // 2. Check if a valid Quiz already exists unless forceRegenerate is true
   let existingQuiz = null;
   if (!forceRegenerate) {
-    existingQuiz = await db.getQuizByTopic(uid, tid);
+    existingQuiz = await db.getQuizByTopic(uid, tid, supabaseClient);
     if (existingQuiz && Array.isArray(existingQuiz.questions) && existingQuiz.questions.length === TOTAL_QUESTIONS) {
       const validation = validateQuestionsSchema(existingQuiz.questions);
       if (validation.valid) {
@@ -434,7 +434,7 @@ async function getOrGenerateAssessment({ userId, topicId, forceRegenerate = fals
   // 3. Find authentic mapped PYQs for this topic
   let mappedPYQs = [];
   try {
-    const pyqAnalysis = await db.getPYQAnalysis(uid, subject.id);
+    const pyqAnalysis = await db.getPYQAnalysis(uid, subject.id, supabaseClient);
     if (pyqAnalysis && Array.isArray(pyqAnalysis.questions)) {
       const cleanTop = cleanString(topicName);
       mappedPYQs = pyqAnalysis.questions.filter(q => {
@@ -483,7 +483,7 @@ async function getOrGenerateAssessment({ userId, topicId, forceRegenerate = fals
     createdAt: new Date(),
   };
 
-  await db.saveQuiz(quizRecord);
+  await db.saveQuiz(quizRecord, supabaseClient);
 
   // 6. Return sanitized assessment to frontend (NEVER expose answers before submission)
   return sanitizeQuizForFrontend(quizRecord);
@@ -518,12 +518,12 @@ function sanitizeQuizForFrontend(quiz) {
 /**
  * Service: Server-Side Scoring, Automatic Completion, and Notification Trigger
  */
-async function submitAssessmentAttempt({ userId, topicId, quizId, answers = {}, startedAt }) {
+async function submitAssessmentAttempt({ userId, topicId, quizId, answers = {}, startedAt, supabaseClient }) {
   const uid = String(userId);
   const tid = String(topicId);
 
   // 1. Fetch user study data
-  const userStudyData = await db.getUserStudyData(uid);
+  const userStudyData = await db.getUserStudyData(uid, supabaseClient);
   const sessions = userStudyData.sessions || [];
   const subjects = userStudyData.subjects || [];
 
@@ -543,10 +543,10 @@ async function submitAssessmentAttempt({ userId, topicId, quizId, answers = {}, 
   // 2. Fetch Quiz with answer key
   let quiz = null;
   if (quizId) {
-    quiz = await db.getQuizById(quizId);
+    quiz = await db.getQuizById(quizId, supabaseClient);
   }
   if (!quiz) {
-    quiz = await db.getQuizByTopic(uid, tid);
+    quiz = await db.getQuizByTopic(uid, tid, supabaseClient);
   }
   if (!quiz || !Array.isArray(quiz.questions) || quiz.questions.length !== TOTAL_QUESTIONS) {
     throw new Error("Assessment data could not be retrieved. Please take the assessment again.");
@@ -608,10 +608,10 @@ async function submitAssessmentAttempt({ userId, topicId, quizId, answers = {}, 
     submittedAt: new Date(),
   };
 
-  await db.saveAttempt(attemptRecord);
+  await db.saveAttempt(attemptRecord, supabaseClient);
 
   // 5. Update Topic Progress & Authoritative Completion (FR-05, FR-06, FR-07)
-  const existingProgress = await db.getTopicProgress(uid, tid);
+  const existingProgress = await db.getTopicProgress(uid, tid, supabaseClient);
   const wasAlreadyCompleted = existingProgress && existingProgress.status === "completed";
   const priorBest = existingProgress ? existingProgress.bestScore || 0 : 0;
   const priorAttempts = existingProgress ? existingProgress.totalAttempts || 0 : 0;
@@ -637,7 +637,7 @@ async function submitAssessmentAttempt({ userId, topicId, quizId, answers = {}, 
     });
 
     if (sessionModified) {
-      await db.saveUserStudyData(uid, { sessions });
+      await db.saveUserStudyData(uid, { sessions }, supabaseClient);
     }
   } else {
     // If topic was already completed in the past, a retake should not wipe the completion
@@ -650,7 +650,7 @@ async function submitAssessmentAttempt({ userId, topicId, quizId, answers = {}, 
           s.status = "needs_revision";
         }
       });
-      await db.saveUserStudyData(uid, { sessions });
+      await db.saveUserStudyData(uid, { sessions }, supabaseClient);
     }
   }
 
@@ -664,7 +664,7 @@ async function submitAssessmentAttempt({ userId, topicId, quizId, answers = {}, 
     totalAttempts: priorAttempts + 1,
     completedAt,
     lastAttemptDate: new Date(),
-  });
+  }, supabaseClient);
 
   // 6. Handle Achievement Email Notification (FR-08)
   let notificationStatus = "none";
@@ -808,11 +808,11 @@ async function submitAssessmentAttempt({ userId, topicId, quizId, answers = {}, 
 /**
  * Service: Retrieve Attempt History for a Topic
  */
-async function getAttemptHistory({ userId, topicId }) {
+async function getAttemptHistory({ userId, topicId, supabaseClient }) {
   const uid = String(userId);
   const tid = String(topicId);
-  const attempts = await db.getAttemptsByTopic(uid, tid);
-  const progress = await db.getTopicProgress(uid, tid);
+  const attempts = await db.getAttemptsByTopic(uid, tid, supabaseClient);
+  const progress = await db.getTopicProgress(uid, tid, supabaseClient);
 
   return {
     topicId: tid,
@@ -838,10 +838,10 @@ async function getAttemptHistory({ userId, topicId }) {
 /**
  * Service: Retrieve Authoritative Topic Progress
  */
-async function getAuthoritativeTopicProgress({ userId, topicId }) {
+async function getAuthoritativeTopicProgress({ userId, topicId, supabaseClient }) {
   const uid = String(userId);
   const tid = String(topicId);
-  const progress = await db.getTopicProgress(uid, tid);
+  const progress = await db.getTopicProgress(uid, tid, supabaseClient);
 
   if (!progress) {
     return {

@@ -46,7 +46,7 @@ if (process.env.MONGODB_URI) {
     console.warn("MongoDB connection notice:", err.message);
   });
 } else {
-  console.log("MongoDB not configured. Using available local storage.");
+  console.log("MongoDB not configured. Using Supabase cloud database.");
 }
 
 // =====================================================

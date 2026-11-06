@@ -289,6 +289,11 @@ const AssessmentManager = {
       this.attemptResult = resData.data;
       this.renderResult(this.attemptResult);
 
+      // Persist directly to Supabase as dual authoritative sync
+      if (this.attemptResult) {
+        this.persistAttemptToSupabase(this.attemptResult);
+      }
+
     } catch (err) {
       console.error('Submission error:', err);
       alert('Could not submit assessment: ' + (err.message || 'Network error'));
@@ -530,6 +535,74 @@ const AssessmentManager = {
     this.closeModal();
     if (typeof renderAll === 'function') {
       renderAll();
+    }
+  },
+
+  async persistAttemptToSupabase(res) {
+    try {
+      if (!window.AuthManager) return;
+      const client = await AuthManager._getClient();
+      if (!client || typeof client.from !== 'function') return;
+      const user = AuthManager.getUser();
+      if (!user || !user.id) return;
+
+      const score = Number(res.score) || 0;
+      const totalQuestions = Number(res.totalQuestions) || 10;
+      const percentage = Number(res.percentage) || Math.round((score / totalQuestions) * 100);
+      const passed = Boolean(res.passed);
+      const attemptId = res.attemptId || `att_${Date.now()}`;
+      const quizId = res.quizId || `quiz_${String(this.currentTopicId).replace(/[^a-zA-Z0-9_]/g, '')}`;
+      const topicId = String(this.currentTopicId || res.topicId);
+      const completedAt = res.completedAt || new Date().toISOString();
+
+      // 1. Direct upsert into public.assessment_attempts
+      const attemptRow = {
+        attempt_id: attemptId,
+        quiz_id: quizId,
+        user_id: user.id,
+        topic_id: topicId,
+        score: score,
+        total_questions: totalQuestions,
+        percentage: percentage,
+        passed: passed,
+        answers: this.selectedAnswers || {},
+        question_results: res.questionBreakdown || [],
+        completed_at: completedAt,
+      };
+
+      const { error: attErr } = await client
+        .from('assessment_attempts')
+        .upsert(attemptRow, { onConflict: 'attempt_id' });
+
+      if (attErr) {
+        console.warn('[Supabase] Client attempt direct upsert notice:', attErr.message);
+      } else {
+        console.log(`[Supabase] Client successfully persisted attempt to assessment_attempts: ${attemptId}`);
+      }
+
+      // 2. Direct upsert into public.topic_progress
+      const progressRow = {
+        user_id: user.id,
+        topic_id: topicId,
+        status: passed ? 'completed' : 'needs_revision',
+        best_score: score,
+        attempts_count: Number(res.totalAttempts) || 1,
+        last_attempt_at: completedAt,
+        completed_at: passed ? completedAt : null,
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error: progErr } = await client
+        .from('topic_progress')
+        .upsert(progressRow, { onConflict: 'user_id,topic_id' });
+
+      if (progErr) {
+        console.warn('[Supabase] Client topic_progress direct upsert notice:', progErr.message);
+      } else {
+        console.log(`[Supabase] Client successfully persisted topic_progress: ${topicId}`);
+      }
+    } catch (err) {
+      console.warn('[Supabase] Client direct persistence notice:', err);
     }
   }
 };

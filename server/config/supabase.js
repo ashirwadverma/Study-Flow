@@ -8,7 +8,8 @@ dotenv.config({
 });
 
 const supabaseUrl = process.env.SUPABASE_URL?.trim();
-const supabasePublishableKey = process.env.SUPABASE_PUBLISHABLE_KEY?.trim();
+const supabasePublishableKey = process.env.SUPABASE_PUBLISHABLE_KEY?.trim() || process.env.SUPABASE_ANON_KEY?.trim();
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
 if (!supabaseUrl || !supabasePublishableKey) {
   throw new Error(
@@ -24,6 +25,18 @@ const supabase = createClient(supabaseUrl, supabasePublishableKey, {
     detectSessionInUrl: false,
   },
 });
+
+// Admin client (service_role): if configured, bypasses RLS for trusted backend operations
+let supabaseAdmin = null;
+if (supabaseServiceRoleKey) {
+  supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+      detectSessionInUrl: false,
+    },
+  });
+}
 
 /**
  * Verify the user's Supabase access token.
@@ -82,13 +95,24 @@ async function createScopedClient(accessToken) {
   return client;
 }
 
-function getSupabaseClient() {
+function getSupabaseClient(clientOverride) {
+  if (clientOverride && typeof clientOverride.from === "function") {
+    return clientOverride;
+  }
+  if (supabaseAdmin) {
+    return supabaseAdmin;
+  }
   return supabase;
+}
+
+function getSupabaseAdmin() {
+  return supabaseAdmin;
 }
 
 module.exports = {
   supabase,
   getSupabaseClient,
+  getSupabaseAdmin,
   verifyAccessToken,
   createAuthenticatedClient,
   createScopedClient,

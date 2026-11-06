@@ -22,6 +22,7 @@ async function getAssessment(req, res) {
       userId,
       topicId: topicId.trim(),
       forceRegenerate,
+      supabaseClient: req.supabaseClient,
     });
 
     return res.status(200).json({
@@ -67,6 +68,7 @@ async function submitAttempt(req, res) {
       quizId,
       answers,
       startedAt,
+      supabaseClient: req.supabaseClient,
     });
 
     return res.status(200).json({
@@ -104,6 +106,7 @@ async function getAttempts(req, res) {
     const history = await assessmentService.getAttemptHistory({
       userId,
       topicId: topicId.trim(),
+      supabaseClient: req.supabaseClient,
     });
 
     return res.status(200).json({
@@ -138,6 +141,7 @@ async function getTopicProgress(req, res) {
     const progress = await assessmentService.getAuthoritativeTopicProgress({
       userId,
       topicId: topicId.trim(),
+      supabaseClient: req.supabaseClient,
     });
 
     return res.status(200).json({

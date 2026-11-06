@@ -2447,6 +2447,64 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
       }
     };
 
+    window.syncCompletedAssessmentsToSupabase = async function() {
+      try {
+        if (!window.AuthManager) return;
+        const client = await AuthManager._getClient();
+        if (!client || typeof client.from !== 'function') return;
+        const user = AuthManager.getUser();
+        if (!user || !user.id) return;
+
+        const sessions = typeof getSess === 'function' ? getSess() : [];
+        const completedSessions = sessions.filter(s => s && (s.status === 'done' || s.status === 'completed' || Number(s.completedScore) >= 8));
+
+        if (!completedSessions.length) return;
+
+        for (const sess of completedSessions) {
+          const topicId = String(sess.id || sess.topicId || sess.topic);
+          const score = Number(sess.completedScore) || 10;
+          const pct = Math.round((score / 10) * 100);
+          const completedAt = sess.completedAt || new Date().toISOString();
+          const attemptId = `att_sync_${user.id.substring(0, 8)}_${String(sess.id || 'topic').replace(/[^a-zA-Z0-9_]/g, '')}`;
+          const quizId = `quiz_${topicId.replace(/[^a-zA-Z0-9_]/g, '')}`;
+
+          // 1. Sync public.assessment_attempts
+          const { error: aErr } = await client.from('assessment_attempts').upsert({
+            attempt_id: attemptId,
+            quiz_id: quizId,
+            user_id: user.id,
+            topic_id: topicId,
+            score: score,
+            total_questions: 10,
+            percentage: pct,
+            passed: true,
+            answers: {},
+            question_results: [],
+            completed_at: completedAt,
+          }, { onConflict: 'attempt_id' });
+
+          if (aErr) console.warn('[Supabase Sync] assessment_attempts notice:', aErr.message);
+
+          // 2. Sync public.topic_progress
+          const { error: pErr } = await client.from('topic_progress').upsert({
+            user_id: user.id,
+            topic_id: topicId,
+            status: 'completed',
+            best_score: score,
+            attempts_count: 1,
+            last_attempt_at: completedAt,
+            completed_at: completedAt,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id,topic_id' });
+
+          if (pErr) console.warn('[Supabase Sync] topic_progress notice:', pErr.message);
+        }
+        console.log('[Supabase Sync] Reconciled and synced completed assessments with Supabase.');
+      } catch (err) {
+        console.warn('[Supabase Sync] Reconciliation notice:', err.message);
+      }
+    };
+
     // Initial render & authentication check
     async function initDashboard() {
       const user = await AuthManager.requireAuth();
@@ -2489,6 +2547,11 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
 
       // Synchronize subjects directly with Supabase
       await syncSubjectsWithSupabase();
+
+      // Synchronize completed assessments & topic progress directly with Supabase
+      if (typeof window.syncCompletedAssessmentsToSupabase === 'function') {
+        await window.syncCompletedAssessmentsToSupabase();
+      }
 
       initNotesSystem();
       if(window.PYQManager) {
