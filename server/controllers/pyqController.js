@@ -70,7 +70,7 @@ async function uploadAndAnalyzePYQ(req, res) {
     }
 
     if (!syllabusUnits.length) {
-      const userStudyData = await db.getUserStudyData(userId);
+      const userStudyData = await db.getUserStudyData(userId, req.supabaseClient);
       const matchedSub = (userStudyData.subjects || []).find(
         s => s.id === cleanSubjectId || (s.name && s.name.toLowerCase().trim() === cleanSubjectName.toLowerCase().trim())
       );
@@ -193,7 +193,7 @@ async function uploadAndAnalyzePYQ(req, res) {
     let finalQuestions = [];
 
     if (!replaceExisting) {
-      const existingAnalysis = await db.getPYQAnalysis(userId, cleanSubjectId);
+      const existingAnalysis = await db.getPYQAnalysis(userId, cleanSubjectId, req.supabaseClient);
       if (existingAnalysis && Array.isArray(existingAnalysis.papers) && existingAnalysis.papers.length > 0) {
         const existingPapers = [...existingAnalysis.papers];
         const existingQuestions = [...(existingAnalysis.questions || [])];
@@ -249,7 +249,7 @@ async function uploadAndAnalyzePYQ(req, res) {
     };
 
     // Save into database / memory store
-    const savedRecord = await db.savePYQAnalysis(userId, cleanSubjectId, pyqRecord);
+    const savedRecord = await db.savePYQAnalysis(userId, cleanSubjectId, pyqRecord, req.supabaseClient);
 
     const isAccumulated = finalPapers.length > papersMetadata.length;
     const successMsg = isAccumulated
@@ -290,7 +290,7 @@ async function getSubjectPYQAnalysis(req, res) {
     const userId = req.user._id || req.user.id;
     const { subjectId } = req.params;
 
-    const analysis = await db.getPYQAnalysis(userId, subjectId);
+    const analysis = await db.getPYQAnalysis(userId, subjectId, req.supabaseClient);
     if (!analysis) {
       return res.status(404).json({
         success: false,
@@ -318,7 +318,7 @@ async function getSubjectPYQAnalysis(req, res) {
 async function getUserPYQHistory(req, res) {
   try {
     const userId = req.user._id || req.user.id;
-    const history = await db.getUserPYQHistory(userId);
+    const history = await db.getUserPYQHistory(userId, req.supabaseClient);
 
     return res.status(200).json({
       success: true,
@@ -344,7 +344,7 @@ async function reclassifyQuestion(req, res) {
     const { subjectId, questionId } = req.params;
     const { matchedTopic, detectedUnit, marks, userNotes } = req.body || {};
 
-    const analysis = await db.getPYQAnalysis(userId, subjectId);
+    const analysis = await db.getPYQAnalysis(userId, subjectId, req.supabaseClient);
     if (!analysis) {
       return res.status(404).json({
         success: false,
@@ -376,7 +376,7 @@ async function reclassifyQuestion(req, res) {
     analysis.questions[questionIndex].isUserCorrected = true;
 
     // Recalculate topic priorities and syllabus coverage
-    const userStudyData = await db.getUserStudyData(userId);
+    const userStudyData = await db.getUserStudyData(userId, req.supabaseClient);
     const matchedSub = (userStudyData.subjects || []).find(s => s.id === subjectId || (s.name && s.name.toLowerCase() === analysis.subjectName.toLowerCase()));
     const syllabusUnits = (matchedSub && matchedSub.units) ? matchedSub.units : [];
 
@@ -392,7 +392,7 @@ async function reclassifyQuestion(req, res) {
     analysis.syllabusCoverage = updatedPriorities.syllabusCoverage;
     analysis.summaryNote = updatedPriorities.summaryNote;
 
-    const saved = await db.savePYQAnalysis(userId, subjectId, analysis);
+    const saved = await db.savePYQAnalysis(userId, subjectId, analysis, req.supabaseClient);
 
     return res.status(200).json({
       success: true,
@@ -417,7 +417,7 @@ async function deleteSubjectPYQ(req, res) {
     const userId = req.user._id || req.user.id;
     const { subjectId } = req.params;
 
-    await db.deletePYQAnalysis(userId, subjectId);
+    await db.deletePYQAnalysis(userId, subjectId, req.supabaseClient);
 
     return res.status(200).json({
       success: true,
@@ -448,7 +448,7 @@ async function generateStudyPlanFromPYQ(req, res) {
       overrideExistingSessions = true
     } = req.body || {};
 
-    const analysis = await db.getPYQAnalysis(userId, subjectId);
+    const analysis = await db.getPYQAnalysis(userId, subjectId, req.supabaseClient);
     if (!analysis) {
       return res.status(404).json({
         success: false,
@@ -456,7 +456,7 @@ async function generateStudyPlanFromPYQ(req, res) {
       });
     }
 
-    const userStudyData = await db.getUserStudyData(userId);
+    const userStudyData = await db.getUserStudyData(userId, req.supabaseClient);
     let subjects = userStudyData.subjects || [];
     let sessions = userStudyData.sessions || [];
     let activity = userStudyData.activity || [];
@@ -572,7 +572,7 @@ async function generateStudyPlanFromPYQ(req, res) {
       subjects,
       sessions,
       activity
-    });
+    }, req.supabaseClient);
 
     return res.status(200).json({
       success: true,
@@ -605,7 +605,7 @@ async function deleteSinglePaper(req, res) {
     const userId = req.user._id || req.user.id;
     const { subjectId, paperId } = req.params;
 
-    const analysis = await db.getPYQAnalysis(userId, subjectId);
+    const analysis = await db.getPYQAnalysis(userId, subjectId, req.supabaseClient);
     if (!analysis) {
       return res.status(404).json({
         success: false,
@@ -617,7 +617,7 @@ async function deleteSinglePaper(req, res) {
     const remainingQuestions = (analysis.questions || []).filter(q => q.paperId !== paperId);
 
     if (remainingPapers.length === 0) {
-      await db.deletePYQAnalysis(userId, subjectId);
+      await db.deletePYQAnalysis(userId, subjectId, req.supabaseClient);
       return res.status(200).json({
         success: true,
         message: "All question papers removed. Analysis reset.",
@@ -626,7 +626,7 @@ async function deleteSinglePaper(req, res) {
     }
 
     // Get syllabus units
-    const userStudyData = await db.getUserStudyData(userId);
+    const userStudyData = await db.getUserStudyData(userId, req.supabaseClient);
     const matchedSub = (userStudyData.subjects || []).find(s => s.id === subjectId || (s.name && s.name.toLowerCase().trim() === (analysis.subjectName || "").toLowerCase().trim()));
     const syllabusUnits = (matchedSub && matchedSub.units) ? matchedSub.units : [];
 
@@ -646,7 +646,7 @@ async function deleteSinglePaper(req, res) {
       summaryNote: prioritizationResult.summaryNote
     };
 
-    const saved = await db.savePYQAnalysis(userId, subjectId, updatedAnalysis);
+    const saved = await db.savePYQAnalysis(userId, subjectId, updatedAnalysis, req.supabaseClient);
     return res.status(200).json({
       success: true,
       message: `Paper removed. Topic priorities recalculated across remaining ${remainingPapers.length} paper(s).`,

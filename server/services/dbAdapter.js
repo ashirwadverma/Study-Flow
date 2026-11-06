@@ -233,11 +233,11 @@ async function saveUserStudyData(userId, updateFields, clientOverride) {
 }
 
 // ─── 3. PYQ ANALYSIS REPOSITORY (Supabase table: pyq_analyses) ───
-async function getPYQAnalysis(userId, subjectId) {
+async function getPYQAnalysis(userId, subjectId, clientOverride) {
   const uid = String(userId);
   const sid = String(subjectId);
   const key = `${uid}_${sid}`;
-  const sb = getSupabase();
+  const sb = getSupabase(clientOverride);
 
   if (sb && sb.from) {
     try {
@@ -277,11 +277,11 @@ async function getPYQAnalysis(userId, subjectId) {
   return runtimeCache.pyqData.get(key) || null;
 }
 
-async function savePYQAnalysis(userId, subjectId, pyqData) {
+async function savePYQAnalysis(userId, subjectId, pyqData, clientOverride) {
   const uid = String(userId);
   const sid = String(subjectId);
   const key = `${uid}_${sid}`;
-  const sb = getSupabase();
+  const sb = getSupabase(clientOverride);
 
   const record = {
     ...pyqData,
@@ -306,11 +306,16 @@ async function savePYQAnalysis(userId, subjectId, pyqData) {
         questions: record.questions || [],
         topic_priorities: record.topicPriorities || [],
         syllabus_coverage: record.syllabusCoverage || {},
-        raw_data: record.raw_data || {},
+        raw_data: record.raw_data || record.rawData || {},
         updated_at: new Date().toISOString(),
       };
 
-      await sb.from("pyq_analyses").upsert(payload, { onConflict: "user_id,subject_id" });
+      const { error } = await sb.from("pyq_analyses").upsert(payload, { onConflict: "user_id,subject_id" });
+      if (error) {
+        console.error("Supabase pyq_analyses upsert error:", error.message, error.details || "");
+      } else {
+        console.log(`[Supabase] Successfully saved pyq_analyses for user ${uid}, subject ${sid}`);
+      }
     } catch (err) {
       console.warn("Supabase savePYQAnalysis notice:", err.message);
     }
@@ -319,9 +324,9 @@ async function savePYQAnalysis(userId, subjectId, pyqData) {
   return record;
 }
 
-async function getUserPYQHistory(userId) {
+async function getUserPYQHistory(userId, clientOverride) {
   const uid = String(userId);
-  const sb = getSupabase();
+  const sb = getSupabase(clientOverride);
 
   if (sb && sb.from) {
     try {
@@ -359,17 +364,22 @@ async function getUserPYQHistory(userId) {
   return results.sort((a, b) => new Date(b.updatedAt || 0) - new Date(a.updatedAt || 0));
 }
 
-async function deletePYQAnalysis(userId, subjectId) {
+async function deletePYQAnalysis(userId, subjectId, clientOverride) {
   const uid = String(userId);
   const sid = String(subjectId);
   const key = `${uid}_${sid}`;
-  const sb = getSupabase();
+  const sb = getSupabase(clientOverride);
 
   runtimeCache.pyqData.delete(key);
 
   if (sb && sb.from) {
     try {
-      await sb.from("pyq_analyses").delete().eq("user_id", uid).eq("subject_id", sid);
+      const { error } = await sb.from("pyq_analyses").delete().eq("user_id", uid).eq("subject_id", sid);
+      if (error) {
+        console.error("Supabase deletePYQAnalysis error:", error.message);
+      } else {
+        console.log(`[Supabase] Successfully deleted pyq_analyses for user ${uid}, subject ${sid}`);
+      }
     } catch (err) {
       console.warn("Supabase deletePYQAnalysis notice:", err.message);
     }

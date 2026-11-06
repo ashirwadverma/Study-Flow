@@ -2505,6 +2505,76 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
       }
     };
 
+    window.syncPYQAnalysesToSupabase = async function() {
+      try {
+        if (!window.AuthManager) return;
+        const client = await AuthManager._getClient();
+        if (!client || typeof client.from !== 'function') return;
+        const user = AuthManager.getUser();
+        if (!user || !user.id) return;
+
+        const uid = user.id;
+        let history = [];
+        const cached = localStorage.getItem(`sf_user_${uid}_pyq_history`) || localStorage.getItem('sf_pyq_history');
+        if (cached) {
+          try { history = JSON.parse(cached); } catch (_) {}
+        }
+
+        if (!history.length) {
+          const res = await AuthManager.fetchWithAuth('/api/pyq/history');
+          if (res && res.ok) {
+            const data = await AuthManager._safeJson(res);
+            if (data && data.success && Array.isArray(data.data)) {
+              history = data.data;
+            }
+          }
+        }
+
+        if (!history.length) return;
+
+        for (const item of history) {
+          const sid = String(item.subjectId || item.subject_id);
+          let fullAnalysis = item;
+
+          if (!Array.isArray(fullAnalysis.questions) || fullAnalysis.questions.length === 0) {
+            const detRes = await AuthManager.fetchWithAuth(`/api/pyq/subject/${encodeURIComponent(sid)}`);
+            if (detRes && detRes.ok) {
+              const detData = await AuthManager._safeJson(detRes);
+              if (detData && detData.success && detData.data) {
+                fullAnalysis = detData.data;
+              }
+            }
+          }
+
+          const payload = {
+            user_id: user.id,
+            subject_id: sid,
+            subject_name: fullAnalysis.subjectName || fullAnalysis.subject_name || 'Course Subject',
+            course_code: fullAnalysis.courseCode || fullAnalysis.course_code || null,
+            university: fullAnalysis.university || null,
+            semester: fullAnalysis.semester || null,
+            exam_type: fullAnalysis.examType || fullAnalysis.exam_type || 'Semester Exam',
+            exam_date: fullAnalysis.examDate || fullAnalysis.exam_date || null,
+            papers: fullAnalysis.papers || [],
+            questions: fullAnalysis.questions || [],
+            topic_priorities: fullAnalysis.topicPriorities || fullAnalysis.topic_priorities || [],
+            syllabus_coverage: fullAnalysis.syllabusCoverage || fullAnalysis.syllabus_coverage || {},
+            raw_data: fullAnalysis.rawData || fullAnalysis.raw_data || {},
+            updated_at: new Date().toISOString(),
+          };
+
+          const { error } = await client.from('pyq_analyses').upsert(payload, { onConflict: 'user_id,subject_id' });
+          if (error) {
+            console.warn('[Supabase Sync PYQ] Notice:', error.message);
+          } else {
+            console.log(`[Supabase Sync PYQ] Reconciled and synced pyq_analyses for "${payload.subject_name}"`);
+          }
+        }
+      } catch (err) {
+        console.warn('[Supabase Sync PYQ] Error:', err.message);
+      }
+    };
+
     // Initial render & authentication check
     async function initDashboard() {
       const user = await AuthManager.requireAuth();
@@ -2551,6 +2621,11 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
       // Synchronize completed assessments & topic progress directly with Supabase
       if (typeof window.syncCompletedAssessmentsToSupabase === 'function') {
         await window.syncCompletedAssessmentsToSupabase();
+      }
+
+      // Synchronize PYQ analyses directly with Supabase
+      if (typeof window.syncPYQAnalysesToSupabase === 'function') {
+        await window.syncPYQAnalysesToSupabase();
       }
 
       initNotesSystem();

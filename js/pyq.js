@@ -80,6 +80,17 @@ const PYQManager = {
       console.warn("Could not load PYQ history from server:", e.message);
     }
 
+    // Supabase client direct fallback if server returned 404 or empty
+    if (!this.pyqHistory || this.pyqHistory.length === 0) {
+      try {
+        const sbHistory = await this.getHistoryFromSupabase();
+        if (sbHistory && sbHistory.length > 0) {
+          this.pyqHistory = sbHistory;
+          this.updateBadgeCount(this.pyqHistory.length);
+        }
+      } catch (_) {}
+    }
+
     // Local fallback if server returned 404 or empty
     if (!this.pyqHistory || this.pyqHistory.length === 0) {
       try {
@@ -182,12 +193,27 @@ const PYQManager = {
       if (data && data.success && data.data) {
         this.activeAnalysis = data.data;
         this.renderActiveAnalysis();
+        // Client dual sync
+        this.persistAnalysisToSupabase(this.activeAnalysis);
       } else {
-        this.renderNotAnalyzedState(subjectId);
+        // Direct Supabase fallback
+        const sbAnalysis = await this.getAnalysisFromSupabase(subjectId);
+        if (sbAnalysis) {
+          this.activeAnalysis = sbAnalysis;
+          this.renderActiveAnalysis();
+        } else {
+          this.renderNotAnalyzedState(subjectId);
+        }
       }
     } catch (e) {
       console.error("Failed to load subject PYQ analysis:", e);
-      this.renderNotAnalyzedState(subjectId);
+      const sbAnalysis = await this.getAnalysisFromSupabase(subjectId);
+      if (sbAnalysis) {
+        this.activeAnalysis = sbAnalysis;
+        this.renderActiveAnalysis();
+      } else {
+        this.renderNotAnalyzedState(subjectId);
+      }
     }
   },
 
@@ -1231,6 +1257,11 @@ const PYQManager = {
 
       this.closeUploadModal();
       window.showToast?.(data.message || 'Multi-year question papers analyzed and merged! 🎉', 'success');
+
+      // Client-side dual sync directly to Supabase
+      if (data.data) {
+        await this.persistAnalysisToSupabase(data.data);
+      }
       
       await this.loadSubjectsAndHistory();
       this.selectSubjectAnalysis(data.data.subjectId);
@@ -1266,6 +1297,7 @@ const PYQManager = {
         if (data.data) {
           this.activeAnalysis = data.data;
           this.renderActiveAnalysis();
+          await this.persistAnalysisToSupabase(this.activeAnalysis);
         } else {
           this.selectSubjectAnalysis(this.activeSubjectId);
         }
@@ -1292,6 +1324,7 @@ const PYQManager = {
 
       if (res.ok && data && data.success) {
         window.showToast?.(data.message || 'PYQ analysis removed.', 'info');
+        await this.deleteAnalysisFromSupabase(targetId);
         this.activeSubjectId = null;
         this.activeAnalysis = null;
         await this.loadSubjectsAndHistory();
@@ -1361,6 +1394,7 @@ const PYQManager = {
         this.closeReclassifyModal();
         window.showToast?.('Classification updated and priorities recalculated! 🎯', 'success');
         this.renderActiveAnalysis();
+        this.persistAnalysisToSupabase(this.activeAnalysis);
       } else {
         alert(data?.message || 'Could not update classification.');
       }
@@ -1503,6 +1537,137 @@ const PYQManager = {
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  },
+
+  async persistAnalysisToSupabase(analysis) {
+    try {
+      if (!window.AuthManager || !analysis) return;
+      const client = await window.AuthManager._getClient();
+      if (!client || typeof client.from !== 'function') return;
+      const user = window.AuthManager.getUser();
+      if (!user || !user.id) return;
+
+      const sid = String(analysis.subjectId || analysis.subject_id);
+      const payload = {
+        user_id: user.id,
+        subject_id: sid,
+        subject_name: analysis.subjectName || analysis.subject_name || 'Course Subject',
+        course_code: analysis.courseCode || analysis.course_code || null,
+        university: analysis.university || null,
+        semester: analysis.semester || null,
+        exam_type: analysis.examType || analysis.exam_type || 'Semester Exam',
+        exam_date: analysis.examDate || analysis.exam_date || null,
+        papers: analysis.papers || [],
+        questions: analysis.questions || [],
+        topic_priorities: analysis.topicPriorities || analysis.topic_priorities || [],
+        syllabus_coverage: analysis.syllabusCoverage || analysis.syllabus_coverage || {},
+        raw_data: analysis.rawData || analysis.raw_data || {},
+        updated_at: new Date().toISOString(),
+      };
+
+      const { error } = await client.from('pyq_analyses').upsert(payload, { onConflict: 'user_id,subject_id' });
+      if (error) {
+        console.warn('[Supabase PYQ] Client upsert notice:', error.message);
+      } else {
+        console.log(`[Supabase PYQ] Successfully persisted analysis to pyq_analyses for subject: ${payload.subject_name}`);
+      }
+    } catch (err) {
+      console.warn('[Supabase PYQ] Client persist error:', err.message);
+    }
+  },
+
+  async getAnalysisFromSupabase(subjectId) {
+    try {
+      if (!window.AuthManager || !subjectId) return null;
+      const client = await window.AuthManager._getClient();
+      if (!client || typeof client.from !== 'function') return null;
+      const user = window.AuthManager.getUser();
+      if (!user || !user.id) return null;
+
+      const { data, error } = await client
+        .from('pyq_analyses')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('subject_id', String(subjectId))
+        .maybeSingle();
+
+      if (!error && data) {
+        return {
+          userId: data.user_id,
+          subjectId: data.subject_id,
+          subjectName: data.subject_name,
+          courseCode: data.course_code,
+          university: data.university,
+          semester: data.semester,
+          examType: data.exam_type,
+          examDate: data.exam_date,
+          papers: data.papers || [],
+          questions: data.questions || [],
+          topicPriorities: data.topic_priorities || [],
+          syllabusCoverage: data.syllabus_coverage || {},
+          rawData: data.raw_data || {},
+          createdAt: data.created_at,
+          updatedAt: data.updated_at,
+        };
+      }
+    } catch (err) {
+      console.warn('[Supabase PYQ] getAnalysisFromSupabase note:', err.message);
+    }
+    return null;
+  },
+
+  async getHistoryFromSupabase() {
+    try {
+      if (!window.AuthManager) return [];
+      const client = await window.AuthManager._getClient();
+      if (!client || typeof client.from !== 'function') return [];
+      const user = window.AuthManager.getUser();
+      if (!user || !user.id) return [];
+
+      const { data, error } = await client
+        .from('pyq_analyses')
+        .select('subject_id, subject_name, course_code, university, semester, exam_type, exam_date, papers, topic_priorities, syllabus_coverage, updated_at, created_at')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false });
+
+      if (!error && Array.isArray(data)) {
+        return data.map(d => ({
+          subjectId: d.subject_id,
+          subjectName: d.subject_name,
+          courseCode: d.course_code,
+          university: d.university,
+          semester: d.semester,
+          examType: d.exam_type,
+          examDate: d.exam_date,
+          papers: d.papers || [],
+          topicPriorities: d.topic_priorities || [],
+          syllabusCoverage: d.syllabus_coverage || {},
+          updatedAt: d.updated_at,
+          createdAt: d.created_at,
+        }));
+      }
+    } catch (err) {
+      console.warn('[Supabase PYQ] getHistoryFromSupabase note:', err.message);
+    }
+    return [];
+  },
+
+  async deleteAnalysisFromSupabase(subjectId) {
+    try {
+      if (!window.AuthManager || !subjectId) return;
+      const client = await window.AuthManager._getClient();
+      if (!client || typeof client.from !== 'function') return;
+      const user = window.AuthManager.getUser();
+      if (!user || !user.id) return;
+
+      await client
+        .from('pyq_analyses')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('subject_id', String(subjectId));
+    } catch (err) {
+      console.warn('[Supabase PYQ] deleteAnalysisFromSupabase note:', err.message);
+    }
   }
 };
 
