@@ -370,10 +370,6 @@
           </div>
         </div>
 
-        <div style="margin-top:.6rem;display:flex;justify-content:space-between;align-items:center;">
-          <button type="button" id="btn-load-sample" style="background:none;border:none;color:var(--accent);font-size:.78rem;font-weight:600;text-decoration:underline;cursor:pointer;">💡 Try Sample Data Structures Syllabus</button>
-        </div>
-
         <div class="modal-error" id="upload-error" style="margin-top:.85rem;"></div>
 
         <button class="modal-submit" id="btn-submit-upload" style="margin-top:1.15rem;">⚡ Analyze Syllabus with Gemini AI</button>
@@ -1708,8 +1704,15 @@
       const err=document.getElementById('sub-modal-error');
       if(!name){err.textContent='Subject name is required.';err.style.display='block';return;}
       
-      const tempId='sub_'+Date.now();
       const subs=getSubs();
+      const existing = subs.find(s => s.name && s.name.trim().toLowerCase() === name.toLowerCase());
+      if(existing){
+        err.textContent = `A subject named "${name}" already exists.`;
+        err.style.display = 'block';
+        return;
+      }
+
+      const tempId='sub_'+Date.now();
       subs.push({id:tempId,name,examDate,color,progress:0});
       saveSubs(subs);
       addAct(`Added subject: <strong>${name}</strong>`);
@@ -1816,38 +1819,6 @@
       document.getElementById('upload-exam-date').value='';
       document.getElementById('upload-error').style.display='none';
       document.getElementById('upload-error').textContent='';
-    }
-
-    // Sample syllabus loader
-    const btnLoadSample=document.getElementById('btn-load-sample');
-    if(btnLoadSample){
-      btnLoadSample.addEventListener('click',()=>{
-        document.getElementById('u-tab-text').click();
-        document.getElementById('paste-subject-title').value='Data Structures & Algorithms';
-        document.getElementById('paste-syllabus-text').value=`COURSE SYLLABUS: Data Structures & Algorithms (CS 201)
-Instructor: Dr. Emily Hayes
-Final Exam Date: ${new Date(Date.now()+28*86400000).toISOString().split('T')[0]}
-
-Unit 1: Arrays, Linked Lists & Complexity Analysis
-- Big-O Notation and Time-Space Complexity (2.5 hours, Easy)
-- Dynamic Arrays & Amortized Analysis (2.0 hours, Easy)
-- Singly and Doubly Linked Lists Implementation (3.0 hours, Medium)
-
-Unit 2: Stacks, Queues & Recursion
-- Stack Applications and Expression Parsing (2.0 hours, Medium)
-- Queue Variants: Circular Queues and Deques (2.5 hours, Medium)
-- Recursion and Divide & Conquer Strategies (3.0 hours, Hard)
-
-Unit 3: Trees, Heaps & Graphs
-- Binary Search Trees: Insertion, Deletion, Balancing (3.5 hours, Hard)
-- Binary Heaps & Priority Queues (2.5 hours, Medium)
-- Graph Representations, BFS & DFS Traversals (3.5 hours, Hard)
-- Shortest Path Algorithms: Dijkstra & Bellman-Ford (3.0 hours, Hard)
-
-Midterm Exam: Week 4 (30% weight)
-Final Comprehensive Exam: Week 8 (50% weight)`;
-        showToast('Sample syllabus loaded! Click Analyze below.');
-      });
     }
 
     // ─── ANALYZE SYLLABUS SUBMISSION ──────────────────────────
@@ -1976,42 +1947,7 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
             if (subCode.length === 0) subCode = null;
           }
 
-          // Ensure subject is saved only once per successful upload
-          if (window.AuthManager && !currentAiResult._hasBeenAutoSaved) {
-            currentAiResult._hasBeenAutoSaved = true;
-            try {
-              const saveRes = await AuthManager.createSupabaseSubject({
-                subject_name: subName,
-                subject_code: subCode,
-                progress: 0,
-              });
-
-              if (saveRes && saveRes.ok && saveRes.data && saveRes.data.data) {
-                const savedObj = Array.isArray(saveRes.data.data) ? saveRes.data.data[0] : saveRes.data.data;
-                currentAiResult.savedSubject = savedObj;
-                currentAiResult.savedSubjectStatus = saveRes.data.alreadyExists ? 'existing' : 'created';
-
-                if (saveRes.data.alreadyExists) {
-                  showToast(`Subject "${subName}" already exists in Supabase. Reusing existing record. 📚`, 'ℹ️');
-                } else {
-                  showToast(`Extracted subject "${subName}" automatically saved to Supabase! 🚀`, '✨');
-                }
-
-                // Refresh dashboard immediately after saving
-                await syncSubjectsWithSupabase();
-                renderAll();
-              } else {
-                console.warn('[Supabase] Subject auto-save notice:', saveRes);
-                if (saveRes && saveRes.status === 403) {
-                  showToast('Database notice: RLS policy is awaiting SQL script execution in Supabase. Preview is active.', '⚠️');
-                } else if (saveRes && saveRes.data && saveRes.data.message) {
-                  showToast(`Database notice: ${saveRes.data.message}`, '⚠️');
-                }
-              }
-            } catch (saveErr) {
-              console.warn('[Supabase] Auto-save error:', saveErr);
-            }
-          } else if (data.savedSubject) {
+          if (data && data.savedSubject) {
             currentAiResult.savedSubject = data.savedSubject;
             currentAiResult.savedSubjectStatus = data.savedSubjectStatus;
           }
@@ -2163,28 +2099,48 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
         const examDate=document.getElementById('prev-input-examdate').value;
         const color=selectedColorTag||'#4f46e5';
 
-        // Bind Supabase Subject ID if saved during analysis
-        let newSubId='sub_'+Date.now();
+        const subs=getSubs();
+        const normName=subName.trim().toLowerCase();
+        const existingIndex=subs.findIndex(s=>s.name&&s.name.trim().toLowerCase()===normName);
+
+        let targetSubId='sub_'+Date.now();
         let supabaseId=null;
         if(currentAiResult.savedSubject && currentAiResult.savedSubject.id){
-          newSubId=String(currentAiResult.savedSubject.id);
+          targetSubId=String(currentAiResult.savedSubject.id);
           supabaseId=currentAiResult.savedSubject.id;
         }
 
-        const subs=getSubs();
-        const newSubject={
-          id:newSubId,
-          supabaseId:supabaseId,
-          name:subName,
-          examDate:examDate,
-          color:color,
-          instructor:currentAiResult.instructor||null,
-          courseCode:currentAiResult.courseCode||null,
-          summary:currentAiResult.summary||null,
-          units:currentAiResult.units||[],
-          progress:0
-        };
-        subs.push(newSubject);
+        if(existingIndex!==-1){
+          // Update the existing subject in-place instead of creating a duplicate!
+          const existing=subs[existingIndex];
+          targetSubId=existing.id;
+          supabaseId=existing.supabaseId||supabaseId;
+
+          existing.name=subName;
+          if(examDate) existing.examDate=examDate;
+          if(color) existing.color=color;
+          if(currentAiResult.instructor) existing.instructor=currentAiResult.instructor;
+          if(currentAiResult.courseCode) existing.courseCode=currentAiResult.courseCode;
+          if(currentAiResult.summary) existing.summary=currentAiResult.summary;
+          if(currentAiResult.units && currentAiResult.units.length) existing.units=currentAiResult.units;
+          if(supabaseId) existing.supabaseId=supabaseId;
+        } else {
+          // Push new subject only when it does not already exist
+          const newSubject={
+            id:targetSubId,
+            supabaseId:supabaseId,
+            name:subName,
+            examDate:examDate,
+            color:color,
+            instructor:currentAiResult.instructor||null,
+            courseCode:currentAiResult.courseCode||null,
+            summary:currentAiResult.summary||null,
+            units:currentAiResult.units||[],
+            progress:0
+          };
+          subs.push(newSubject);
+        }
+
         saveSubs(subs);
 
         // If not already persisted to Supabase, save now in background
@@ -2199,13 +2155,14 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
               if(res&&res.ok&&res.data&&res.data.data){
                 const currentSubs=getSubs();
                 const currentSess=getSess();
-                const found=currentSubs.find(s=>s.id===newSubId);
+                const found=currentSubs.find(s=>s.id===targetSubId || (s.name && s.name.trim().toLowerCase()===normName));
                 if(found){
                   const realId=String(res.data.data.id);
+                  const oldId=found.id;
                   found.id=realId;
                   found.supabaseId=res.data.data.id;
                   currentSess.forEach(ses=>{
-                    if(ses.subjectId===newSubId)ses.subjectId=realId;
+                    if(String(ses.subjectId)===String(oldId))ses.subjectId=realId;
                   });
                   saveSubs(currentSubs);
                   saveSess(currentSess);
@@ -2218,28 +2175,38 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
           })();
         }
 
-        const sess=getSess();
-        // Use the exact calculated & scheduled dates verified in the preview modal
+        // Sessions management: preserve completed sessions and schedule topics
+        let sess=getSess();
         const sessionsList=currentAiResult._normalizedSessions||[];
 
+        const preservedSess=sess.filter(x=>String(x.subjectId)!==String(targetSubId)||x.status==='done'||x.status==='completed');
+        const completedTopics=new Set(
+          sess.filter(x=>String(x.subjectId)===String(targetSubId)&&(x.status==='done'||x.status==='completed'))
+              .map(x=>(x.topic||'').trim().toLowerCase())
+        );
+
         sessionsList.forEach((s,i)=>{
-          sess.push({
-            id:'ses_'+(Date.now()+i),
-            subjectId:newSubId,
-            topic:s.topic||s.title||`Topic ${i+1}`,
-            hours:parseFloat(s.hours)||2,
-            difficulty:s.difficulty||'medium',
-            date:s.scheduledDate||todayStr(),
-            status:'pending'
-          });
+          const topicName=s.topic||s.title||`Topic ${i+1}`;
+          if(!completedTopics.has(topicName.trim().toLowerCase())){
+            preservedSess.push({
+              id:'ses_'+(Date.now()+i),
+              subjectId:targetSubId,
+              topic:topicName,
+              hours:parseFloat(s.hours)||2,
+              difficulty:s.difficulty||'medium',
+              date:s.scheduledDate||todayStr(),
+              status:'pending'
+            });
+          }
         });
 
-        saveSess(sess);
+        saveSess(preservedSess);
         addAct(`AI imported syllabus: <strong>${subName}</strong> with ${sessionsList.length} scheduled sessions ✨`);
         closeAiPreviewModal();
         showToast(`Semester tracker updated with ${subName}! 🚀`);
 
         document.querySelector('.sidebar-nav .nav-item[data-tab="home"]').click();
+        if(typeof deduplicateSubjects === 'function') deduplicateSubjects();
         renderAll();
       });
     }
@@ -2365,6 +2332,109 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
       }
     });
 
+    // ─── DEDUPLICATION UTILITY ──────────────────────────────────
+    function deduplicateSubjects(inputSubs) {
+      const subs = inputSubs || getSubs();
+      let sess = getSess();
+      let modified = false;
+
+      // Group by normalized subject name
+      const groups = new Map();
+      subs.forEach(s => {
+        const key = (s.name || '').trim().toLowerCase();
+        if (!key) return;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push(s);
+      });
+
+      const cleanSubs = [];
+      const deletedSupabaseIds = [];
+
+      groups.forEach((group) => {
+        if (group.length === 1) {
+          cleanSubs.push(group[0]);
+          return;
+        }
+
+        // Multiple subjects with identical name!
+        modified = true;
+
+        // Rank subjects: highest score is the canonical record to retain
+        const scored = group.map(s => {
+          let score = 0;
+          if (s.units && Array.isArray(s.units) && s.units.length > 0) score += 100 * s.units.length;
+          if (s.examDate) score += 50;
+          if (s.courseCode || s.instructor) score += 10;
+          if (s.supabaseId || (!String(s.id).startsWith('sub_') && !isNaN(Number(s.id)))) score += 20;
+          return { sub: s, score };
+        });
+
+        scored.sort((a, b) => b.score - a.score);
+        const canonical = { ...scored[0].sub };
+        const duplicates = scored.slice(1).map(x => x.sub);
+
+        // Merge missing fields from duplicates into canonical
+        duplicates.forEach(dup => {
+          if (!canonical.examDate && dup.examDate) canonical.examDate = dup.examDate;
+          if ((!canonical.units || canonical.units.length === 0) && dup.units && dup.units.length > 0) {
+            canonical.units = dup.units;
+          }
+          if (!canonical.courseCode && dup.courseCode) canonical.courseCode = dup.courseCode;
+          if (!canonical.instructor && dup.instructor) canonical.instructor = dup.instructor;
+          if (!canonical.supabaseId && dup.supabaseId) canonical.supabaseId = dup.supabaseId;
+
+          // Re-link study sessions pointing to dup.id -> canonical.id
+          const oldId = String(dup.id);
+          const newId = String(canonical.id);
+          if (oldId !== newId) {
+            sess.forEach(ses => {
+              if (String(ses.subjectId) === oldId) {
+                ses.subjectId = newId;
+              }
+            });
+          }
+
+          // Queue duplicate Supabase subject for deletion if it has a distinct remote ID
+          const dupRemoteId = dup.supabaseId || (!String(dup.id).startsWith('sub_') && !isNaN(Number(dup.id)) ? dup.id : null);
+          const canRemoteId = canonical.supabaseId || (!String(canonical.id).startsWith('sub_') && !isNaN(Number(canonical.id)) ? canonical.id : null);
+          if (dupRemoteId && String(dupRemoteId) !== String(canRemoteId)) {
+            deletedSupabaseIds.push(dupRemoteId);
+          }
+        });
+
+        cleanSubs.push(canonical);
+      });
+
+      // Deduplicate pending sessions for the same subject with identical topic names
+      const seenTopics = new Set();
+      const cleanSess = [];
+      sess.forEach(ses => {
+        const k = `${ses.subjectId}:::${(ses.topic || '').trim().toLowerCase()}`;
+        if (!seenTopics.has(k) || ses.status === 'done' || ses.status === 'completed') {
+          seenTopics.add(k);
+          cleanSess.push(ses);
+        } else {
+          modified = true;
+        }
+      });
+
+      if (modified) {
+        console.log(`[Deduplicate] Cleaned up duplicate subjects/sessions. Remaining subjects: ${cleanSubs.length}`);
+        saveSubs(cleanSubs);
+        saveSess(cleanSess);
+
+        if (window.AuthManager && deletedSupabaseIds.length > 0) {
+          deletedSupabaseIds.forEach(remId => {
+            console.log(`[Supabase] Removing redundant duplicate subject ID: ${remId}`);
+            AuthManager.deleteSupabaseSubject(remId).catch(err => console.warn('Supabase delete error:', err));
+          });
+        }
+      }
+
+      return cleanSubs;
+    }
+    window.deduplicateSubjects = deduplicateSubjects;
+
     // ─── SUPABASE SUBJECTS INTEGRATION ─────────────────────────
     async function syncSubjectsWithSupabase() {
       if (!window.AuthManager) return;
@@ -2375,13 +2445,45 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
           const localSubs = getSubs();
           const localSess = getSess();
 
+          // Deduplicate remoteSubs array itself in case database holds duplicate rows
+          const uniqueRemoteSubs = [];
+          const remoteSeen = new Set();
+          const remoteDuplicates = [];
+
+          remoteSubs.forEach(rs => {
+            const key = (rs.subject_name || rs.name || '').trim().toLowerCase();
+            if (!remoteSeen.has(key)) {
+              remoteSeen.add(key);
+              uniqueRemoteSubs.push(rs);
+            } else {
+              remoteDuplicates.push(rs);
+            }
+          });
+
+          // Clean up any extra remote duplicate rows in Supabase
+          if (remoteDuplicates.length > 0) {
+            remoteDuplicates.forEach(dup => {
+              if (dup.id) {
+                console.log(`[Supabase] Deleting remote duplicate subject ID: ${dup.id}`);
+                AuthManager.deleteSupabaseSubject(dup.id).catch(e => console.warn(e));
+              }
+            });
+          }
+
           // Merge remote records with local state
-          const mergedSubs = remoteSubs.map(rs => {
-            const match = localSubs.find(ls => 
+          const mergedSubs = uniqueRemoteSubs.map(rs => {
+            const matches = localSubs.filter(ls => 
               String(ls.id) === String(rs.id) || 
               String(ls.supabaseId) === String(rs.id) || 
-              (ls.name && ls.name.toLowerCase() === (rs.subject_name || rs.name || '').toLowerCase())
+              (ls.name && ls.name.trim().toLowerCase() === (rs.subject_name || rs.name || '').trim().toLowerCase())
             );
+
+            // Intelligently select the local record with units and exam date
+            const match = matches.sort((a, b) => {
+              const aScore = (a.units?.length || 0) * 10 + (a.examDate ? 5 : 0);
+              const bScore = (b.units?.length || 0) * 10 + (b.examDate ? 5 : 0);
+              return bScore - aScore;
+            })[0];
 
             // Compute current progress from local sessions if available
             let progressVal = rs.progress !== undefined ? Number(rs.progress) : 0;
@@ -2403,18 +2505,24 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
               color: match ? match.color : '#4f46e5',
               instructor: match ? match.instructor : null,
               summary: match ? match.summary : null,
-              units: match ? match.units : []
+              units: (match && match.units && match.units.length) ? match.units : []
             };
           });
 
           // Retain any local subjects that have not yet been synchronized
           localSubs.forEach(ls => {
-            if (!mergedSubs.some(ms => String(ms.id) === String(ls.id) || (ms.name && ms.name.toLowerCase() === ls.name.toLowerCase()))) {
+            const lsNorm = (ls.name || '').trim().toLowerCase();
+            const alreadyMerged = mergedSubs.some(ms => 
+              String(ms.id) === String(ls.id) || 
+              (ms.name && ms.name.trim().toLowerCase() === lsNorm)
+            );
+            if (!alreadyMerged) {
               mergedSubs.push(ls);
             }
           });
 
-          localStorage.setItem(getUserKey('subjects'), JSON.stringify(mergedSubs));
+          const finalized = deduplicateSubjects(mergedSubs);
+          localStorage.setItem(getUserKey('subjects'), JSON.stringify(finalized));
           renderAll();
         }
       } catch (err) {
@@ -2615,8 +2723,18 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
         console.warn('Could not sync initial cloud data:', e);
       }
 
+      // Deduplicate any existing local/cloud subjects before syncing
+      if (typeof deduplicateSubjects === 'function') {
+        deduplicateSubjects();
+      }
+
       // Synchronize subjects directly with Supabase
       await syncSubjectsWithSupabase();
+
+      // Ensure deduplication after Supabase sync
+      if (typeof deduplicateSubjects === 'function') {
+        deduplicateSubjects();
+      }
 
       // Synchronize completed assessments & topic progress directly with Supabase
       if (typeof window.syncCompletedAssessmentsToSupabase === 'function') {
