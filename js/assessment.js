@@ -14,6 +14,21 @@ const AssessmentManager = {
   startedAt: null,
   attemptResult: null,
 
+  async _safeJson(res) {
+    if (!res) return null;
+    try {
+      const text = await res.text();
+      if (!text || !text.trim()) return null;
+      const trimmed = text.trim();
+      if (trimmed.startsWith('<') || trimmed.includes('<!DOCTYPE') || trimmed.includes('<html')) {
+        return null;
+      }
+      return JSON.parse(text);
+    } catch (_) {
+      return null;
+    }
+  },
+
   // ─── OPEN ASSESSMENT MODAL ────────────────────────────────
   async openModal(topicId, forceRegenerate = false) {
     if (!topicId) return;
@@ -63,10 +78,10 @@ const AssessmentManager = {
     try {
       const url = `/api/topics/${encodeURIComponent(topicId)}/assessment${forceRegenerate ? '?regenerate=true' : ''}`;
       const response = await AuthManager.fetchWithAuth(url, { method: 'GET' });
-      const data = await response.json();
+      const data = await this._safeJson(response);
 
-      if (!response.ok || !data.success || !data.data) {
-        throw new Error(data.message || 'Could not load topic assessment.');
+      if (!response.ok || !data || !data.success || !data.data) {
+        throw new Error(data?.message || `Could not load assessment (Status ${response ? response.status : 'error'}). Please ensure backend server is running (npm start).`);
       }
 
       this.currentQuiz = data.data;
@@ -266,9 +281,9 @@ const AssessmentManager = {
         })
       });
 
-      const resData = await response.json();
-      if (!response.ok || !resData.success || !resData.data) {
-        throw new Error(resData.message || 'Submission failed.');
+      const resData = await this._safeJson(response);
+      if (!response.ok || !resData || !resData.success || !resData.data) {
+        throw new Error(resData?.message || `Submission failed (Status ${response ? response.status : 'error'}).`);
       }
 
       this.attemptResult = resData.data;
@@ -458,8 +473,8 @@ const AssessmentManager = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'completed' })
       });
-      const data = await res.json();
-      if (res.ok && data.success) {
+      const data = await this._safeJson(res);
+      if (res && res.ok && data && data.success) {
         const btn = document.getElementById('btn-mark-pyq-practiced');
         if (btn) {
           btn.textContent = '✓ Practiced & Mastered';

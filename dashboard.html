@@ -1931,7 +1931,11 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
           }
 
           if (!rawText || !rawText.trim()) {
-            throw new Error(`The backend server returned an empty response (Status ${res ? res.status : 'unknown'}). If using Netlify, verify the backend is deployed on Render and connected via _redirects or js/api-config.js.`);
+            throw new Error(`The backend server returned an empty response (Status ${res ? res.status : 'unknown'}). If testing locally, start your Express backend with 'npm start' on port 5000.`);
+          }
+
+          if (res && res.status === 404) {
+            throw new Error(`API endpoint ${apiUrl} returned 404 Not Found. Please ensure your Express backend is running (npm start) on http://localhost:5000.`);
           }
 
           let data = null;
@@ -1940,7 +1944,7 @@ Final Comprehensive Exam: Week 8 (50% weight)`;
           } catch (jsonErr) {
             console.warn('[AI Syllabus] Non-JSON response from server (Status ' + (res ? res.status : '') + '):', rawText.slice(0, 300));
             if (rawText.includes('<!DOCTYPE') || rawText.includes('<html')) {
-              throw new Error(`The server returned an HTML page (Status ${res ? res.status : ''}). This occurs when the request hits a static host instead of the backend API. Please configure your deployed backend URL in js/api-config.js or Netlify redirects.`);
+              throw new Error(`The server returned an HTML error page (Status ${res ? res.status : '404'}). Please start your backend server using 'npm start' and visit http://localhost:5000/dashboard.html.`);
             }
             throw new Error(`Invalid response format from server: ${rawText.slice(0, 120)}`);
           }

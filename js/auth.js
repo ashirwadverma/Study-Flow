@@ -469,12 +469,16 @@ const AuthManager = {
     return session.user;
   },
 
-  // Safe JSON response parser
+  // Safe JSON response parser that safely ignores HTML error pages without throwing SyntaxError
   async _safeJson(response) {
     if (!response) return null;
     try {
       const text = await response.text();
       if (!text || !text.trim()) return null;
+      const trimmed = text.trim();
+      if (trimmed.startsWith('<') || trimmed.includes('<!DOCTYPE') || trimmed.includes('<html')) {
+        return null;
+      }
       return JSON.parse(text);
     } catch (_) {
       return null;
@@ -483,100 +487,335 @@ const AuthManager = {
 
   // Sync user study data to/from server with Supabase Bearer token
   async syncUserData(studyData) {
+    if (!studyData) return null;
+    let savedOnServer = false;
     try {
       const response = await AuthManager.fetchWithAuth('/api/user/data', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(studyData),
       });
-      return await AuthManager._safeJson(response);
+      if (response && response.ok) {
+        const result = await AuthManager._safeJson(response);
+        if (result && result.success) {
+          savedOnServer = true;
+          return result;
+        }
+      }
     } catch (e) {
       console.warn('Background study data sync note:', e.message);
-      return null;
     }
+
+    // Always mirror to localStorage for resilience
+    try {
+      const user = AuthManager.getUser();
+      const uid = user ? (user.id || user._id || user.email) : 'anon';
+      if (studyData.subjects) localStorage.setItem(`sf_user_${uid}_subjects`, JSON.stringify(studyData.subjects));
+      if (studyData.sessions) localStorage.setItem(`sf_user_${uid}_sessions`, JSON.stringify(studyData.sessions));
+      if (studyData.notes) localStorage.setItem(`sf_user_${uid}_notes`, JSON.stringify(studyData.notes));
+      if (studyData.activity) localStorage.setItem(`sf_user_${uid}_activity`, JSON.stringify(studyData.activity));
+    } catch (_) {}
+
+    return { success: true, localOnly: !savedOnServer };
   },
 
-  // Fetch user study data from server with Supabase Bearer token
+  // Fetch user study data from server with Supabase Bearer token & local fallback
   async fetchUserData() {
     try {
       const response = await AuthManager.fetchWithAuth('/api/user/data', {
         method: 'GET',
       });
-      const data = await AuthManager._safeJson(response);
-      if (response && response.ok && data && data.success) {
-        return data.data;
+      if (response && response.ok) {
+        const data = await AuthManager._safeJson(response);
+        if (data && data.success && data.data) {
+          return data.data;
+        }
       }
-      return null;
     } catch (e) {
       console.warn('Fetch study data note:', e.message);
+    }
+
+    // Fallback to local cache if server is offline or returned 404
+    try {
+      const user = AuthManager.getUser();
+      const uid = user ? (user.id || user._id || user.email) : 'anon';
+      const rawSessions = localStorage.getItem(`sf_user_${uid}_sessions`) || localStorage.getItem('sf_sessions') || '[]';
+      const rawSubjects = localStorage.getItem(`sf_user_${uid}_subjects`) || localStorage.getItem('sf_subjects') || '[]';
+      const rawNotes = localStorage.getItem(`sf_user_${uid}_notes`) || localStorage.getItem('sf_study_notes') || '{}';
+      const rawActivity = localStorage.getItem(`sf_user_${uid}_activity`) || localStorage.getItem('sf_activity') || '[]';
+
+      return {
+        subjects: JSON.parse(rawSubjects),
+        sessions: JSON.parse(rawSessions),
+        notes: JSON.parse(rawNotes),
+        activity: JSON.parse(rawActivity),
+        settings: {},
+      };
+    } catch (_) {
       return null;
     }
   },
 
-  // ─── SUPABASE SUBJECTS API METHODS ──────────────────────────
+  // ─── SUPABASE SUBJECTS API METHODS (Dual Mode: Server API + Direct Client Fallback) ───
   // GET /api/subjects
   async getSupabaseSubjects() {
+    // 1. Primary: Query backend API
     try {
       const response = await AuthManager.fetchWithAuth('/api/subjects', {
         method: 'GET',
       });
-      const data = await AuthManager._safeJson(response);
-      if (response && response.ok && data && data.success && Array.isArray(data.data)) {
-        return data.data;
+      if (response && response.ok) {
+        const data = await AuthManager._safeJson(response);
+        if (data && data.success && Array.isArray(data.data)) {
+          return data.data;
+        }
       }
-      return null;
     } catch (e) {
-      console.warn('[Supabase] getSupabaseSubjects error:', e.message);
-      return null;
+      console.warn('[Supabase] getSupabaseSubjects backend notice:', e.message);
     }
+
+    // 2. Direct Supabase Client Fallback (when backend is not running or returns 404)
+    try {
+      const client = await AuthManager._getClient();
+      if (client && typeof client.from === 'function') {
+        let { data, error } = await client
+          .from('Subjects')
+          .select('*')
+          .order('created_at', { ascending: false });
+
+        if (error && error.code === 'PGRST205') {
+          const fallback = await client
+            .from('subjects')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (!fallback.error && fallback.data) {
+            data = fallback.data;
+            error = null;
+          }
+        }
+
+        if (!error && Array.isArray(data)) {
+          return data.map(sub => ({
+            id: sub.id,
+            user_id: sub.user_id,
+            subject_name: sub.subject_name || sub.name || '',
+            subject_code: sub.subject_code || sub.code || '',
+            name: sub.subject_name || sub.name || '',
+            code: sub.subject_code || sub.code || '',
+            progress: sub.progress !== undefined ? Number(sub.progress) : 0,
+            created_at: sub.created_at,
+          }));
+        }
+      }
+    } catch (sbErr) {
+      console.warn('[Supabase] Direct client subjects fallback notice:', sbErr.message);
+    }
+
+    // 3. Local storage fallback
+    try {
+      const user = AuthManager.getUser();
+      const uid = user ? (user.id || user._id || user.email) : 'anon';
+      const cached = localStorage.getItem(`sf_user_${uid}_subjects`) || localStorage.getItem('sf_subjects');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (_) {}
+
+    return null;
   },
 
   // POST /api/subjects
   async createSupabaseSubject(subjectPayload) {
+    // 1. Primary: Send to backend API
     try {
       const response = await AuthManager.fetchWithAuth('/api/subjects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(subjectPayload),
       });
-      const data = await AuthManager._safeJson(response);
-      return { ok: response.ok, status: response.status, data };
+      if (response && response.ok) {
+        const data = await AuthManager._safeJson(response);
+        return { ok: true, status: response.status, data };
+      }
     } catch (e) {
-      console.warn('[Supabase] createSupabaseSubject error:', e.message);
-      return { ok: false, error: e.message };
+      console.warn('[Supabase] createSupabaseSubject backend notice:', e.message);
     }
+
+    // 2. Direct Supabase Client Fallback
+    try {
+      const client = await AuthManager._getClient();
+      const user = AuthManager.getUser();
+      if (client && typeof client.from === 'function' && user && (user.id || user._id)) {
+        const userId = user.id || user._id;
+        const subName = (subjectPayload.subject_name || subjectPayload.name || '').trim();
+        const subCode = subjectPayload.subject_code || subjectPayload.code || null;
+        const progress = Number(subjectPayload.progress) || 0;
+
+        const record = {
+          user_id: userId,
+          subject_name: subName,
+          subject_code: subCode,
+          progress: progress,
+        };
+
+        let { data, error } = await client.from('Subjects').insert([record]).select().single();
+        if (error && error.code === 'PGRST205') {
+          const fb = await client.from('subjects').insert([{
+            user_id: userId,
+            name: subName,
+            code: subCode,
+            progress: progress,
+          }]).select().single();
+          if (!fb.error && fb.data) {
+            data = fb.data;
+            error = null;
+          }
+        }
+
+        if (!error && data) {
+          const formatted = {
+            id: data.id,
+            user_id: data.user_id,
+            subject_name: data.subject_name || data.name || subName,
+            subject_code: data.subject_code || data.code || subCode,
+            name: data.subject_name || data.name || subName,
+            code: data.subject_code || data.code || subCode,
+            progress: data.progress !== undefined ? Number(data.progress) : progress,
+            created_at: data.created_at,
+          };
+          return { ok: true, status: 201, data: { success: true, data: formatted } };
+        }
+      }
+    } catch (sbErr) {
+      console.warn('[Supabase] Direct client create fallback notice:', sbErr.message);
+    }
+
+    return { ok: false, error: 'Could not create subject.' };
   },
 
   // PATCH /api/subjects/:id
   async updateSupabaseSubject(id, updatePayload) {
+    if (!id || String(id).startsWith('sub_')) return { ok: false, message: 'Invalid ID' };
+
+    // 1. Primary: Send to backend API
     try {
-      if (!id || String(id).startsWith('sub_')) return { ok: false, message: 'Invalid ID' };
       const response = await AuthManager.fetchWithAuth(`/api/subjects/${encodeURIComponent(id)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatePayload),
       });
-      const data = await AuthManager._safeJson(response);
-      return { ok: response.ok, status: response.status, data };
+      if (response && response.ok) {
+        const data = await AuthManager._safeJson(response);
+        return { ok: true, status: response.status, data };
+      }
     } catch (e) {
-      console.warn('[Supabase] updateSupabaseSubject error:', e.message);
-      return { ok: false, error: e.message };
+      console.warn('[Supabase] updateSupabaseSubject backend notice:', e.message);
     }
+
+    // 2. Direct Supabase Client Fallback
+    try {
+      const client = await AuthManager._getClient();
+      const user = AuthManager.getUser();
+      if (client && typeof client.from === 'function' && user && (user.id || user._id)) {
+        const userId = user.id || user._id;
+        const queryId = /^\d+$/.test(String(id)) ? Number(id) : id;
+
+        const updateData = {};
+        if (updatePayload.progress !== undefined) updateData.progress = Number(updatePayload.progress) || 0;
+        if (updatePayload.subject_name) updateData.subject_name = updatePayload.subject_name;
+        if (updatePayload.subject_code !== undefined) updateData.subject_code = updatePayload.subject_code;
+
+        let { data, error } = await client
+          .from('Subjects')
+          .update(updateData)
+          .eq('id', queryId)
+          .eq('user_id', userId)
+          .select();
+
+        if (error && error.code === 'PGRST205') {
+          const fbUpdate = {};
+          if (updatePayload.progress !== undefined) fbUpdate.progress = Number(updatePayload.progress) || 0;
+          if (updatePayload.subject_name || updatePayload.name) fbUpdate.name = updatePayload.subject_name || updatePayload.name;
+          if (updatePayload.subject_code !== undefined || updatePayload.code !== undefined) fbUpdate.code = updatePayload.subject_code || updatePayload.code;
+
+          const fb = await client
+            .from('subjects')
+            .update(fbUpdate)
+            .eq('id', queryId)
+            .eq('user_id', userId)
+            .select();
+          if (!fb.error && fb.data) {
+            data = fb.data;
+            error = null;
+          }
+        }
+
+        if (!error && data && data.length > 0) {
+          return { ok: true, status: 200, data: { success: true, data: data[0] } };
+        }
+      }
+    } catch (sbErr) {
+      console.warn('[Supabase] Direct client update fallback notice:', sbErr.message);
+    }
+
+    return { ok: false, error: 'Could not update subject.' };
   },
 
   // DELETE /api/subjects/:id
   async deleteSupabaseSubject(id) {
+    if (!id || String(id).startsWith('sub_')) return { ok: false, message: 'Invalid ID' };
+
+    // 1. Primary: Send to backend API
     try {
-      if (!id || String(id).startsWith('sub_')) return { ok: false, message: 'Invalid ID' };
       const response = await AuthManager.fetchWithAuth(`/api/subjects/${encodeURIComponent(id)}`, {
         method: 'DELETE',
       });
-      const data = await AuthManager._safeJson(response);
-      return { ok: response.ok, status: response.status, data };
+      if (response && response.ok) {
+        const data = await AuthManager._safeJson(response);
+        return { ok: true, status: response.status, data };
+      }
     } catch (e) {
-      console.warn('[Supabase] deleteSupabaseSubject error:', e.message);
-      return { ok: false, error: e.message };
+      console.warn('[Supabase] deleteSupabaseSubject backend notice:', e.message);
     }
+
+    // 2. Direct Supabase Client Fallback
+    try {
+      const client = await AuthManager._getClient();
+      const user = AuthManager.getUser();
+      if (client && typeof client.from === 'function' && user && (user.id || user._id)) {
+        const userId = user.id || user._id;
+        const queryId = /^\d+$/.test(String(id)) ? Number(id) : id;
+
+        let { data, error } = await client
+          .from('Subjects')
+          .delete()
+          .eq('id', queryId)
+          .eq('user_id', userId)
+          .select();
+
+        if (error && error.code === 'PGRST205') {
+          const fb = await client
+            .from('subjects')
+            .delete()
+            .eq('id', queryId)
+            .eq('user_id', userId)
+            .select();
+          if (!fb.error && fb.data) {
+            data = fb.data;
+            error = null;
+          }
+        }
+
+        if (!error && data && data.length > 0) {
+          return { ok: true, status: 200, data: { success: true, data: data[0] } };
+        }
+      }
+    } catch (sbErr) {
+      console.warn('[Supabase] Direct client delete fallback notice:', sbErr.message);
+    }
+
+    return { ok: false, error: 'Could not delete subject.' };
   },
 };
 

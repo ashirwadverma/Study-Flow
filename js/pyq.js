@@ -37,6 +37,22 @@ const PYQManager = {
     return fetch(fullUrl, { ...options, headers, credentials: 'include' });
   },
 
+  // Safe JSON response parser
+  async _safeJson(res) {
+    if (!res) return null;
+    try {
+      const text = await res.text();
+      if (!text || !text.trim()) return null;
+      const trimmed = text.trim();
+      if (trimmed.startsWith('<') || trimmed.includes('<!DOCTYPE') || trimmed.includes('<html')) {
+        return null;
+      }
+      return JSON.parse(text);
+    } catch (_) {
+      return null;
+    }
+  },
+
   // Initialize PYQ Tab
   async init() {
     console.log("Initializing Previous-Year Question Paper Analyzer...");
@@ -44,27 +60,45 @@ const PYQManager = {
     this.setupEventListeners();
   },
 
-  // Load user subjects and past PYQ analyses
+  // Load user subjects and past PYQ analyses with local persistence fallback
   async loadSubjectsAndHistory() {
     try {
       const historyRes = await this.fetchAuth('/api/pyq/history');
-      const rawText = await historyRes.text().catch(() => '');
-      let historyData = null;
-      try {
-        historyData = JSON.parse(rawText);
-      } catch (_) {}
-      if (historyData && historyData.success) {
-        this.pyqHistory = historyData.data || [];
-        this.updateBadgeCount(this.pyqHistory.length);
+      if (historyRes && historyRes.ok) {
+        const historyData = await this._safeJson(historyRes);
+        if (historyData && historyData.success) {
+          this.pyqHistory = historyData.data || [];
+          this.updateBadgeCount(this.pyqHistory.length);
+          // Mirror to local cache
+          try {
+            const uid = window.AuthManager?.getUser?.()?.id || 'anon';
+            localStorage.setItem(`sf_user_${uid}_pyq_history`, JSON.stringify(this.pyqHistory));
+          } catch (_) {}
+        }
       }
     } catch (e) {
-      console.warn("Could not load PYQ history:", e);
+      console.warn("Could not load PYQ history from server:", e.message);
+    }
+
+    // Local fallback if server returned 404 or empty
+    if (!this.pyqHistory || this.pyqHistory.length === 0) {
+      try {
+        const uid = window.AuthManager?.getUser?.()?.id || 'anon';
+        const cached = localStorage.getItem(`sf_user_${uid}_pyq_history`) || localStorage.getItem('sf_pyq_history');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            this.pyqHistory = parsed;
+            this.updateBadgeCount(this.pyqHistory.length);
+          }
+        }
+      } catch (_) {}
     }
 
     this.populateSubjectDropdown();
 
     // Auto-select latest analysis or first available
-    if (this.pyqHistory.length > 0) {
+    if (this.pyqHistory && this.pyqHistory.length > 0) {
       const latest = this.pyqHistory[0];
       this.selectSubjectAnalysis(latest.subjectId);
     } else {
@@ -1224,9 +1258,9 @@ const PYQManager = {
       const res = await this.fetchAuth(`/api/pyq/paper/${encodeURIComponent(this.activeSubjectId)}/${encodeURIComponent(paperId)}`, {
         method: 'DELETE'
       });
-      const data = await res.json();
+      const data = await this._safeJson(res);
 
-      if (res.ok && data.success) {
+      if (res.ok && data && data.success) {
         window.showToast?.(data.message || 'Paper removed and priorities recalculated.', 'info');
         await this.loadSubjectsAndHistory();
         if (data.data) {
@@ -1236,7 +1270,7 @@ const PYQManager = {
           this.selectSubjectAnalysis(this.activeSubjectId);
         }
       } else {
-        alert(data.message || 'Failed to remove paper.');
+        alert(data?.message || 'Failed to remove paper.');
       }
     } catch (e) {
       alert('Error removing paper: ' + e.message);
@@ -1254,15 +1288,15 @@ const PYQManager = {
       const res = await this.fetchAuth(`/api/pyq/subject/${encodeURIComponent(targetId)}`, {
         method: 'DELETE'
       });
-      const data = await res.json();
+      const data = await this._safeJson(res);
 
-      if (res.ok && data.success) {
+      if (res.ok && data && data.success) {
         window.showToast?.(data.message || 'PYQ analysis removed.', 'info');
         this.activeSubjectId = null;
         this.activeAnalysis = null;
         await this.loadSubjectsAndHistory();
       } else {
-        alert(data.message || 'Could not delete PYQ analysis.');
+        alert(data?.message || 'Could not delete PYQ analysis.');
       }
     } catch (e) {
       alert('Error deleting PYQ analysis: ' + e.message);
@@ -1321,14 +1355,14 @@ const PYQManager = {
         })
       });
 
-      const data = await res.json();
-      if (data.success && data.data) {
+      const data = await this._safeJson(res);
+      if (data && data.success && data.data) {
         this.activeAnalysis = data.data;
         this.closeReclassifyModal();
         window.showToast?.('Classification updated and priorities recalculated! 🎯', 'success');
         this.renderActiveAnalysis();
       } else {
-        alert(data.message || 'Could not update classification.');
+        alert(data?.message || 'Could not update classification.');
       }
     } catch (e) {
       alert('Error updating question classification.');
@@ -1391,9 +1425,9 @@ const PYQManager = {
         })
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || 'Failed to generate study plan.');
+      const data = await this._safeJson(res);
+      if (!res.ok || !data || !data.success) {
+        throw new Error(data?.message || `Failed to generate study plan (Status ${res ? res.status : 'error'}).`);
       }
 
       this.closeStudyPlanModal();

@@ -26,6 +26,10 @@
       host === 'localhost' ||
       host === '127.0.0.1' ||
       host === '0.0.0.0' ||
+      host === '[::1]' ||
+      /^192\.168\./.test(host) ||
+      /^10\./.test(host) ||
+      /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(host) ||
       host.endsWith('.local') ||
       proto === 'file:'
     );
@@ -84,6 +88,24 @@
       return base ? `${base}${cleanPath}` : cleanPath;
     },
 
+    // Check backend health
+    checkBackendHealth: async function () {
+      try {
+        const url = config.getApiUrl('/api/health');
+        const res = await fetch(url, { method: 'GET' });
+        if (res.ok) {
+          const ct = (res.headers && res.headers.get('content-type')) || '';
+          if (ct.includes('application/json')) {
+            const data = await res.json().catch(() => null);
+            return { online: true, url, data };
+          }
+        }
+        return { online: false, url, status: res.status };
+      } catch (err) {
+        return { online: false, url: config.getApiUrl('/api/health'), error: err.message };
+      }
+    },
+
     // Set or clear custom backend URL at runtime (persisted in localStorage)
     setApiBaseUrl: function (url) {
       try {
@@ -97,6 +119,23 @@
       } catch (_) {}
     },
   };
+
+  // Eager background check in local environment to guide the developer
+  if (typeof window !== 'undefined' && isLocalEnvironment() && window.location.port !== '5000') {
+    setTimeout(async () => {
+      const health = await config.checkBackendHealth();
+      if (!health.online) {
+        console.info(
+          '%c[StudyFlow Info]%c Backend server not detected on http://localhost:5000.\n' +
+          '• If using AI Syllabus Analysis or PYQ features, please start your backend in terminal:\n' +
+          '  npm start\n' +
+          '• Or open http://localhost:5000/dashboard.html directly in your browser.',
+          'color:#6366f1;font-weight:bold;',
+          'color:inherit;'
+        );
+      }
+    }, 1500);
+  }
 
   global.STUDYFLOW_CONFIG = Object.assign(global.STUDYFLOW_CONFIG || {}, config);
   global.getStudyFlowApiUrl = config.getApiUrl;
