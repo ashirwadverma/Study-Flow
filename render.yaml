@@ -5,10 +5,10 @@
 
 services:
   - type: web
-    name: studyflow-backend
+    name: study-flow-tn2r
     env: node
     plan: free
-    region: oregon
+    region: singapore
     buildCommand: npm install
     startCommand: npm start
     healthCheckPath: /api/health
@@ -24,6 +24,8 @@ services:
       - key: SUPABASE_URL
         value: https://wunghwovfpwbwforqeaq.supabase.co
       - key: SUPABASE_PUBLISHABLE_KEY
+        value: sb_publishable_7N7nid5nIBmgcD8N1zmfng_ohYSrKrd
+      - key: SUPABASE_ANON_KEY
         value: sb_publishable_7N7nid5nIBmgcD8N1zmfng_ohYSrKrd
       - key: FRONTEND_URL
         value: https://studyflow247.netlify.app

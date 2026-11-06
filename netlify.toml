@@ -9,7 +9,7 @@
 # Update "to" with your live Render backend URL once deployed.
 [[redirects]]
   from = "/api/*"
-  to = "https://studyflow-backend.onrender.com/api/:splat"
+  to = "https://study-flow-tn2r.onrender.com/api/:splat"
   status = 200
   force = true
 

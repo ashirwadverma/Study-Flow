@@ -4,10 +4,10 @@
 #
 # When your Node.js/Express backend is deployed (e.g. on Render):
 # Update the URL below with your actual deployed backend URL:
-# Example: /api/*  https://studyflow-backend.onrender.com/api/:splat  200!
+# Example: /api/*  https://study-flow-tn2r.onrender.com/api/:splat  200!
 #
 # This enables the frontend to make relative calls to "/api/*" without CORS
 # or mixed-content issues. Netlify's CDN seamlessly proxies them to the backend.
 
-/api/*  https://studyflow-backend.onrender.com/api/:splat  200!
+/api/*  https://study-flow-tn2r.onrender.com/api/:splat  200!
 

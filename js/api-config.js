@@ -15,7 +15,7 @@
   // you can specify it here.
   // If left as '' (empty string), frontend requests use relative paths ('/api/...'),
   // which are automatically forwarded to the backend via Netlify's _redirects file.
-  const DEPLOYED_BACKEND_URL = '';
+  const DEPLOYED_BACKEND_URL = 'https://study-flow-tn2r.onrender.com';
 
   // ── 2. LOCAL ENVIRONMENT DETECTION ──────────────────────────────────────────
   function isLocalEnvironment() {
